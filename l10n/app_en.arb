@@ -1,4 +1,5 @@
 {
+  "@@locale": "en",
   "appTitle": "DeskSwitch",
   "@appTitle": {
     "description": "The title of the application"
