@@ -1,0 +1,118 @@
+{
+  "appTitle": "DeskSwitch",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "selectMode": "Select Mode",
+  "@selectMode": {
+    "description": "Title for the mode selection screen"
+  },
+  "clientMode": "Client Mode",
+  "@clientMode": {
+    "description": "Title for client mode"
+  },
+  "serverMode": "Server Mode",
+  "@serverMode": {
+    "description": "Title for server mode"
+  },
+  "connectToServer": "Connect to Server",
+  "@connectToServer": {
+    "description": "Button text for connecting to server"
+  },
+  "connectionSettings": "Connection Settings",
+  "@connectionSettings": {
+    "description": "Title for connection settings screen"
+  },
+  "profileManagement": "Profile Management",
+  "@profileManagement": {
+    "description": "Title for profile management screen"
+  },
+  "networkConfiguration": "Network Configuration",
+  "@networkConfiguration": {
+    "description": "Title for network configuration screen"
+  },
+  "connectedClients": "Connected Clients",
+  "@connectedClients": {
+    "description": "Title for connected clients screen"
+  },
+  "serverIp": "Server IP",
+  "@serverIp": {
+    "description": "Label for server IP input"
+  },
+  "port": "Port",
+  "@port": {
+    "description": "Label for port input"
+  },
+  "connect": "Connect",
+  "@connect": {
+    "description": "Button text for connect action"
+  },
+  "disconnect": "Disconnect",
+  "@disconnect": {
+    "description": "Button text for disconnect action"
+  },
+  "status": "Status",
+  "@status": {
+    "description": "Label for connection status"
+  },
+  "connected": "Connected",
+  "@connected": {
+    "description": "Status text for connected state"
+  },
+  "disconnected": "Disconnected",
+  "@disconnected": {
+    "description": "Status text for disconnected state"
+  },
+  "connecting": "Connecting...",
+  "@connecting": {
+    "description": "Status text for connecting state"
+  },
+  "error": "Error",
+  "@error": {
+    "description": "Label for error state"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Title for settings screen"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Button text for save action"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Button text for cancel action"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Button text for delete action"
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Button text for edit action"
+  },
+  "create": "Create",
+  "@create": {
+    "description": "Button text for create action"
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Label for search input"
+  },
+  "noResults": "No results found",
+  "@noResults": {
+    "description": "Text shown when no results are found"
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Text shown during loading"
+  },
+  "errorOccurred": "An error occurred",
+  "@errorOccurred": {
+    "description": "Generic error message"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Button text for retry action"
+  }
+}

@@ -1,0 +1,122 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "update version",
+			"type": "shell",
+			"command": "./scripts/update_version.sh",
+			"problemMatcher": [],
+			"detail": "Update build number in pubspec.yaml"
+		},
+		{
+			"label": "build all",
+			"type": "shell",
+			"problemMatcher": [],
+			"detail": "Build all apps",
+			"dependsOn": [
+				"build web releases",
+				"build Android release",
+				"build iOS release"
+			],
+			"dependsOrder": "parallel"
+		},
+		{
+			"label": "install and build all",
+			"type": "shell",
+			"problemMatcher": [],
+			"detail": "Install dependencies and build all apps",
+			"dependsOn": [
+				"install",
+				"build all"
+			],
+			"dependsOrder": "sequence"
+		},
+		{
+			"label": "build web app release",
+			"type": "shell",
+			"command": "time fvm flutter build web -t ./lib/main.dart -o ./build/web/app --release --dart-define-from-file=env.production.json",
+			"group": "build",
+			"detail": "Build web app release version"
+		},
+		{
+			"label": "build web admin tool release",
+			"type": "shell",
+			"command": "time fvm flutter build web -t ./lib/@admin/main.dart -o ./build/web/admin  --release --dart-define-from-file=env.production.json",
+			"group": "build",
+			"detail": "Build web admin tool release version"
+		},
+		{
+			"label": "build web releases",
+			"type": "shell",
+			"dependsOn": [
+				"build web app release",
+				"build web admin tool release"
+			],
+			"problemMatcher": [],
+			"dependsOrder": "parallel",
+			"detail": "Build both web app and admin tool release versions"
+		},
+		{
+			"label": "build Android release",
+			"type": "shell",
+			"command": "time fvm flutter build appbundle --release --dart-define-from-file=env.production.json",
+			"group": "build",
+			"detail": "Build Android release version"
+		},
+		{
+			"label": "build iOS release",
+			"type": "shell",
+			"command": "time fvm flutter build ipa --obfuscate --split-debug-info=build/app/outputs/symbols --release --dart-define-from-file=env.production.json",
+			"group": "build",
+			"detail": "Build iOS release version"
+		},
+		{
+			"label": "generate code",
+			"type": "shell",
+			"command": "dart run build_runner build --delete-conflicting-outputs",
+			"problemMatcher": [],
+			"detail": "Run build runner to generate code once",
+			"dependsOn": [
+				"generate l10n"
+			]
+		},
+		{
+			"label": "generate code:watch",
+			"type": "shell",
+			"command": "dart run build_runner watch --delete-conflicting-outputs",
+			"problemMatcher": [],
+			"detail": "Run build runner to watch generating code",
+			"dependsOn": [
+				"generate l10n"
+			]
+		},
+		{
+			"label": "generate l10n",
+			"type": "shell",
+			"command": "flutter gen-l10n",
+			"problemMatcher": [],
+			"detail": "Generate localization files"
+		},
+		{
+			"label": "generate splash screen",
+			"type": "shell",
+			"command": "dart run flutter_native_splash:create",
+			"problemMatcher": [],
+			"detail": "Generate native splash screen settings from flutter_native_splash.yaml"
+		},
+		{
+			"label": "install",
+			"type": "shell",
+			"command": "flutter clean; flutter pub get",
+			"problemMatcher": [],
+			"detail": "Clean project and get packages"
+		},
+		{
+			"label": "generate doc",
+			"type": "dart",
+			"command": "dartdoc",
+			"problemMatcher": [],
+			"detail": "Generate dart documentations"
+		},
+	]
+}
