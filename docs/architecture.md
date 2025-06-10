@@ -1,4 +1,4 @@
-# KVM Switch Application Architecture
+# DeskSwitch Architecture
 
 ## Overview
 This document defines the architecture, coding standards, and structural rules for the KVM Switch application. Following these guidelines ensures consistency, maintainability, and scalability of the codebase.

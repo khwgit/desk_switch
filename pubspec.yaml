@@ -58,10 +58,6 @@ flutter:
   uses-material-design: true
   generate: true
 
-  # Add the following section for localization
-  assets:
-    - assets/translations/
-
   # assets:
   #   - assets/images/
   #   - assets/icons/

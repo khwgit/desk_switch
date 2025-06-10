@@ -32,8 +32,10 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/l10n/untranslated.json
 *.freezed.dart
 *.g.dart
+*.l10n.dart
 
 # Symbolication related
 app.*.symbols
