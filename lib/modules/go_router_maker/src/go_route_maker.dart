@@ -6,35 +6,41 @@ import 'package:go_router/go_router.dart';
 import 'go_route_config.dart';
 import 'internal/utils.dart';
 
-typedef GoRouteMakerWidgetBuilder<T extends GoRouteData?> = Widget Function(
-  BuildContext context,
-  GoRouterState state,
-  T data,
-);
+typedef GoRouteMakerWidgetBuilder<T extends GoRouteData?> =
+    Widget Function(
+      BuildContext context,
+      GoRouterState state,
+      T data,
+    );
 
-typedef GoRouteMakerPageBuilder<T extends GoRouteData?> = Page<void> Function(
-  BuildContext context,
-  GoRouterState state,
-  T data,
-);
+typedef GoRouteMakerPageBuilder<T extends GoRouteData?> =
+    Page<void> Function(
+      BuildContext context,
+      GoRouterState state,
+      T data,
+    );
 
-typedef GoRouteMakerRedirect<T extends GoRouteData?> = FutureOr<String?>
-    Function(
-  BuildContext context,
-  GoRouterState state,
-  T data,
-);
+typedef GoRouteMakerRedirect<T extends GoRouteData?> =
+    FutureOr<String?> Function(
+      BuildContext context,
+      GoRouterState state,
+      T data,
+    );
 
-typedef GoRouteMakerExitCallback<T extends GoRouteData?> = FutureOr<bool>
-    Function(
-  BuildContext context,
-  GoRouterState state,
-  T data,
-);
+typedef GoRouteMakerExitCallback<T extends GoRouteData?> =
+    FutureOr<bool> Function(
+      BuildContext context,
+      GoRouterState state,
+      T data,
+    );
 
-class GoRouteMaker extends GoRouteMakerBase<Null> {
-  const GoRouteMaker({
-    required super.location,
+typedef GoRouteLocationBuilder<T extends GoRouteData?> =
+    String Function(
+      T data,
+    );
+
+class RouteMaker extends RouteMakerBase<Null> {
+  RouteMaker({
     super.name,
     super.builder,
     super.pageBuilder,
@@ -48,9 +54,8 @@ class GoRouteMaker extends GoRouteMakerBase<Null> {
   }
 }
 
-class DataGoRouteMaker<T extends GoRouteData> extends GoRouteMakerBase<T> {
-  const DataGoRouteMaker({
-    required super.location,
+class DataRouteMaker<T extends GoRouteData> extends RouteMakerBase<T> {
+  DataRouteMaker({
     required RouteMakerDataBuilder<T> super.data,
     super.name,
     super.builder,
@@ -65,8 +70,8 @@ class DataGoRouteMaker<T extends GoRouteData> extends GoRouteMakerBase<T> {
   }
 }
 
-abstract class GoRouteMakerBase<T extends GoRouteData?> {
-  final String Function(T data) location;
+abstract class RouteMakerBase<T extends GoRouteData?> {
+  late final String Function(T data) location;
   final RouteMakerDataBuilder<T>? data;
   final String? name;
   final GoRouteMakerWidgetBuilder<T>? builder;
@@ -78,6 +83,8 @@ abstract class GoRouteMakerBase<T extends GoRouteData?> {
 
   GoRoute $route({
     required String path,
+    required GoRouteLocationBuilder<T> location,
+    bool caseSensitive = true,
     List<RouteBase> routes = const [],
   }) {
     T extract(GoRouterState state) {
@@ -89,14 +96,17 @@ abstract class GoRouteMakerBase<T extends GoRouteData?> {
       return (_stateObjectExpando[state] ??= data?.call(state)) as T;
     }
 
+    this.location = location;
     return GoRoute(
       path: path,
       name: name,
       routes: routes,
       parentNavigatorKey: parentNavigatorKey,
+      caseSensitive: caseSensitive,
       builder: (context, state) {
         final extracted = extract(state);
-        final result = builder?.call(context, state, extracted) ??
+        final result =
+            builder?.call(context, state, extracted) ??
             extracted?.build(context, state);
         if (result != null) return result;
         throw UnimplementedError(
@@ -123,8 +133,8 @@ abstract class GoRouteMakerBase<T extends GoRouteData?> {
     );
   }
 
-  const GoRouteMakerBase._({
-    required this.location,
+  RouteMakerBase._({
+    // required this.location,
     this.data,
     this.name,
     this.builder,
