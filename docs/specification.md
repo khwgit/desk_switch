@@ -1,4 +1,4 @@
-# KVM Switch Application Specification
+# DeskSwitch Application Specification
 
 ## Overview
 A cross-platform KVM (Keyboard, Video, Mouse) switch application built with Flutter that enables users to control multiple computers from a single set of peripherals. The application supports both client and server modes, with a focus on MacOS and Windows platforms initially, with plans for future desktop platform support.

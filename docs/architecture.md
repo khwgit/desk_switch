@@ -1,7 +1,7 @@
 # DeskSwitch Architecture
 
 ## Overview
-This document defines the architecture, coding standards, and structural rules for the KVM Switch application. Following these guidelines ensures consistency, maintainability, and scalability of the codebase.
+This document defines the architecture, coding standards, and structural rules for the DeskSwitch application. Following these guidelines ensures consistency, maintainability, and scalability of the codebase.
 
 ## Project Structure
 
@@ -314,4 +314,4 @@ final featureRepositoryProvider = Provider<FeatureRepository>((ref) {
 - Dependency updates
 
 ## Conclusion
-This architecture document serves as a guide for maintaining consistency and quality in the KVM Switch application. All team members should follow these guidelines to ensure the project remains maintainable and scalable. 
+This architecture document serves as a guide for maintaining consistency and quality in the DeskSwitch application. All team members should follow these guidelines to ensure the project remains maintainable and scalable. 
