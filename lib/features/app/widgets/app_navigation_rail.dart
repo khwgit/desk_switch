@@ -1,4 +1,3 @@
-import 'package:desk_switch/shared/providers/app_state_provider.dart';
 import 'package:desk_switch/shared/router/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -18,7 +17,6 @@ class AppNavigationRail extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appState = ref.watch(appStateProvider);
     final appRoute = ref.watch(appRouteProvider);
     final theme = Theme.of(context);
     final isHovered = useState(false);
