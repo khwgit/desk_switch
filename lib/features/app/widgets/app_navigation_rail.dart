@@ -1,4 +1,4 @@
-import 'package:desk_switch/shared/providers/app_state.dart';
+import 'package:desk_switch/shared/providers/app_state_provider.dart';
 import 'package:desk_switch/shared/router/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
@@ -19,7 +19,6 @@ class AppNavigationRail extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appState = ref.watch(appStateProvider);
     final appRoute = ref.watch(appRouteProvider);
-    final isClientMode = appState.isClientMode;
     final theme = Theme.of(context);
 
     return SizedBox(

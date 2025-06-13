@@ -1,8 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:uuid/uuid.dart';
 
 part 'connection.freezed.dart';
-part 'connection.g.dart';
 
 /// Connection status enum
 enum ConnectionStatus {
@@ -13,87 +11,54 @@ enum ConnectionStatus {
   error,
 }
 
+/// Connection type enum
+enum ConnectionType {
+  client,
+  server,
+}
+
 /// Connection model representing a client-server connection
 @freezed
 sealed class Connection with _$Connection {
-  const factory Connection({
+  /// Client connection
+  const factory Connection.client({
     required String id,
-    required String serverIp,
-    required int port,
-    required ConnectionStatus status,
-    required DateTime connectedAt,
-    required Map<String, dynamic> settings,
-    String? errorMessage,
-  }) = _Connection;
+    @Default(ConnectionStatus.disconnected) ConnectionStatus status,
+  }) = ClientConnection;
 
-  factory Connection.create({
-    required String serverIp,
-    required int port,
-    required Map<String, dynamic> settings,
-  }) {
-    return Connection(
-      id: const Uuid().v4(),
-      serverIp: serverIp,
-      port: port,
-      status: ConnectionStatus.disconnected,
-      connectedAt: DateTime.now(),
-      settings: settings,
-    );
-  }
+  /// Server connection
+  const factory Connection.server({
+    required String id,
+  }) = ServerConnection;
 
-  factory Connection.fromJson(Map<String, dynamic> json) =>
-      _$ConnectionFromJson(json);
+  ConnectionType get type;
 }
 
-/// Connection settings keys
-class ConnectionSettings {
-  static const String displayMode = 'displayMode';
-  static const String keyboardLayout = 'keyboardLayout';
-  static const String mouseSensitivity = 'mouseSensitivity';
-  static const String autoReconnect = 'autoReconnect';
-  static const String reconnectAttempts = 'reconnectAttempts';
-  static const String reconnectDelay = 'reconnectDelay';
-  static const String securityEnabled = 'securityEnabled';
-  static const String password = 'password';
-}
+@freezed
+abstract class ClientConnection with _$ClientConnection implements Connection {
+  const ClientConnection._();
+  const factory ClientConnection({
+    required String id,
+    @Default(ConnectionStatus.disconnected) ConnectionStatus status,
+  }) = _ClientConnection;
 
-/// Extension methods for Connection
-extension ConnectionX on Connection {
-  String get displayMode =>
-      settings[ConnectionSettings.displayMode] as String? ?? 'extend';
-  String? get keyboardLayout =>
-      settings[ConnectionSettings.keyboardLayout] as String?;
-  double get mouseSensitivity =>
-      (settings[ConnectionSettings.mouseSensitivity] as num?)?.toDouble() ??
-      1.0;
-  bool get autoReconnect =>
-      settings[ConnectionSettings.autoReconnect] as bool? ?? true;
-  int get reconnectAttempts =>
-      settings[ConnectionSettings.reconnectAttempts] as int? ?? 3;
-  int get reconnectDelay =>
-      settings[ConnectionSettings.reconnectDelay] as int? ?? 5000;
-  bool get securityEnabled =>
-      settings[ConnectionSettings.securityEnabled] as bool? ?? false;
-  String? get password => settings[ConnectionSettings.password] as String?;
+  @override
+  ConnectionType get type => ConnectionType.client;
 
   bool get isConnected => status == ConnectionStatus.connected;
   bool get isConnecting => status == ConnectionStatus.connecting;
   bool get isDisconnected => status == ConnectionStatus.disconnected;
   bool get isDisconnecting => status == ConnectionStatus.disconnecting;
-  bool get hasError => status == ConnectionStatus.error;
+  bool get isError => status == ConnectionStatus.error;
+}
 
-  String get statusText {
-    switch (status) {
-      case ConnectionStatus.connected:
-        return 'Connected';
-      case ConnectionStatus.connecting:
-        return 'Connecting...';
-      case ConnectionStatus.disconnected:
-        return 'Disconnected';
-      case ConnectionStatus.disconnecting:
-        return 'Disconnecting...';
-      case ConnectionStatus.error:
-        return 'Error: ${errorMessage ?? 'Unknown error'}';
-    }
-  }
+@freezed
+abstract class ServerConnection with _$ServerConnection implements Connection {
+  const ServerConnection._();
+  const factory ServerConnection({
+    required String id,
+  }) = _ServerConnection;
+
+  @override
+  ConnectionType get type => ConnectionType.server;
 }

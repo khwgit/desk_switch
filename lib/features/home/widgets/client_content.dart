@@ -1,5 +1,4 @@
-import 'package:desk_switch/shared/models/connection.dart';
-import 'package:desk_switch/shared/providers/app_state.dart';
+import 'package:desk_switch/shared/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -9,8 +8,14 @@ class ClientContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appState = ref.watch(appStateProvider);
+    // final appState = ref.watch(appStateProvider);
     final theme = Theme.of(context);
+    // final connection = ref.watch(provider)
+    final isClientRunning = ref.watch(
+      appStateProvider.select(
+        (state) => state.connection is ClientContent,
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -50,18 +55,21 @@ class ClientContent extends HookConsumerWidget {
             ),
           ),
           const Spacer(),
-          // Start Button Section
+          // Start/Stop Button Section
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 FilledButton.icon(
-                  onPressed: (appState.currentConnection?.isConnected ?? false)
-                      ? null
+                  onPressed: isClientRunning
+                      ? () {
+                          // TODO: Implement stop client
+                        }
                       : () {
                           // TODO: Implement start client
                         },
-                  label: const Text('Start Client'),
+                  icon: Icon(isClientRunning ? Icons.stop : Icons.play_arrow),
+                  label: Text(isClientRunning ? 'Stop' : 'Start Client'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 32,

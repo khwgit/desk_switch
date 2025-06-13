@@ -1,4 +1,4 @@
-import 'package:desk_switch/shared/providers/app_state.dart';
+import 'package:desk_switch/shared/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -8,8 +8,12 @@ class ServerContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appState = ref.watch(appStateProvider);
     final theme = Theme.of(context);
+    final isServerRunning = ref.watch(
+      appStateProvider.select(
+        (state) => state.connection is ServerContent,
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -40,48 +44,54 @@ class ServerContent extends HookConsumerWidget {
                     ],
                   ),
                   const Gap(16),
-                  if (appState.profiles.isEmpty)
-                    const Text('No profiles available')
-                  else
-                    DropdownButtonFormField<String>(
-                      value: appState.activeProfile?.id,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Profile',
-                      ),
-                      items: appState.profiles.map((profile) {
-                        return DropdownMenuItem(
-                          value: profile.id,
-                          child: Text(profile.name),
-                        );
-                      }).toList(),
-                      onChanged: (profileId) {
-                        if (profileId != null) {
-                          final profile = appState.profiles.firstWhere(
-                            (p) => p.id == profileId,
-                          );
-                          ref
-                              .read(appStateProvider.notifier)
-                              .setActiveProfile(profile);
-                        }
-                      },
-                    ),
+                  // if (appState.profiles.isEmpty)
+                  //   const Text('No profiles available')
+                  // else
+                  //   DropdownButtonFormField<String>(
+                  //     value: appState.activeProfile?.id,
+                  //     decoration: const InputDecoration(
+                  //       labelText: 'Select Profile',
+                  //     ),
+                  //     items: appState.profiles.map((profile) {
+                  //       return DropdownMenuItem(
+                  //         value: profile.id,
+                  //         child: Text(profile.name),
+                  //       );
+                  //     }).toList(),
+                  //     onChanged: (profileId) {
+                  //       if (profileId != null) {
+                  //         final profile = appState.profiles.firstWhere(
+                  //           (p) => p.id == profileId,
+                  //         );
+                  //         ref
+                  //             .read(appStateProvider.notifier)
+                  //             .setActiveProfile(profile);
+                  //       }
+                  //     },
+                  //   ),
                 ],
               ),
             ),
           ),
           const Spacer(),
-          // Start Button Section
+          // Start/Stop Button Section
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 FilledButton.icon(
-                  onPressed: appState.activeProfile == null
-                      ? null
-                      : () {
-                          // TODO: Implement start server
-                        },
-                  label: const Text('Start Server'),
+                  onPressed: null,
+                  // onPressed: isServerRunning
+                  //     ? () {
+                  //         // TODO: Implement stop server
+                  //       }
+                  //     : appState.activeProfile == null
+                  //     ? null
+                  //     : () {
+                  //         // TODO: Implement start server
+                  //       },
+                  icon: Icon(isServerRunning ? Icons.stop : Icons.play_arrow),
+                  label: Text(isServerRunning ? 'Stop' : 'Start Server'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 32,

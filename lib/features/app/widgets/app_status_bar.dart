@@ -1,5 +1,5 @@
 import 'package:desk_switch/shared/models/connection.dart';
-import 'package:desk_switch/shared/providers/app_state.dart';
+import 'package:desk_switch/shared/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -8,8 +8,11 @@ class AppStatusBar extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appState = ref.watch(appStateProvider);
-    final isClientMode = appState.isClientMode;
+    final connection = ref.watch(
+      appStateProvider.select(
+        (state) => state.connection,
+      ),
+    );
     final theme = Theme.of(context);
 
     // Determine status
@@ -17,16 +20,15 @@ class AppStatusBar extends HookConsumerWidget {
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.pause_circle_filled;
 
-    if (isClientMode) {
-      final conn = appState.currentConnection;
-      if (conn != null) {
-        if (conn.isConnected) {
-          statusText =
-              'Connected to '
-              '${conn.serverIp}${conn.settings['hostName'] != null ? ' (${conn.settings['hostName']})' : ''}';
+    switch (connection) {
+      case ClientConnection():
+        if (connection.isConnected) {
+          // statusText =
+          //     'Connected to '
+          //     '${connection.serverIp}${connection.settings['hostName'] != null ? ' (${connection.settings['hostName']})' : ''}';
           statusColor = Colors.green;
           statusIcon = Icons.check_circle;
-        } else if (conn.isConnecting) {
+        } else if (connection.isConnecting) {
           statusText = 'Connecting';
           statusColor = Colors.orange;
           statusIcon = Icons.sync;
@@ -35,18 +37,17 @@ class AppStatusBar extends HookConsumerWidget {
           statusColor = Colors.grey;
           statusIcon = Icons.pause_circle_filled;
         }
-      }
-    } else {
-      // Server mode
-      if (appState.activeProfile != null) {
+        break;
+      case ServerConnection():
         statusText = 'Running';
         statusColor = Colors.blue;
         statusIcon = Icons.play_circle_fill;
-      } else {
+        break;
+      case null:
         statusText = 'Not Running';
         statusColor = Colors.grey;
         statusIcon = Icons.pause_circle_filled;
-      }
+        break;
     }
 
     return Container(
@@ -74,15 +75,15 @@ class AppStatusBar extends HookConsumerWidget {
             style: theme.textTheme.bodyMedium?.copyWith(color: statusColor),
           ),
           const SizedBox(width: 16),
-          // IP addresses
-          if (appState.networkConfig != null) ...[
-            const Icon(Icons.network_check, size: 16),
-            const SizedBox(width: 4),
-            Text(
-              appState.networkConfig!.ipAddress,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
+          // // IP addresses
+          // if (appState.networkConfig != null) ...[
+          //   const Icon(Icons.network_check, size: 16),
+          //   const SizedBox(width: 4),
+          //   Text(
+          //     appState.networkConfig!.ipAddress,
+          //     style: theme.textTheme.bodyMedium,
+          //   ),
+          // ],
         ],
       ),
     );
