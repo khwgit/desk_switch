@@ -26,28 +26,36 @@ class DeskSwitchApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final theme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.blue,
+      ),
+      useMaterial3: true,
+      cardTheme: const CardThemeData(
+        elevation: 0,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: const OutlineInputBorder(),
+        filled: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        minWidth: 72,
+      ),
+    );
+
     return MaterialApp.router(
       title: 'DeskSwitch',
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-        ),
-        useMaterial3: true,
-        cardTheme: const CardThemeData(
-          elevation: 0,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+      theme: theme,
+      darkTheme: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
           brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        cardTheme: const CardThemeData(
-          elevation: 0,
         ),
       ),
     );

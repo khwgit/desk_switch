@@ -23,9 +23,10 @@ class HomeScreen extends HookConsumerWidget {
 
     return Column(
       children: [
+        Gap(24),
         // Custom Mode Selection Cards
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: IntrinsicHeight(
             child: Row(
               children: [
@@ -62,10 +63,13 @@ class HomeScreen extends HookConsumerWidget {
         ),
         // Mode-specific Content
         Expanded(
-          child: switch (connectionType.value) {
-            ConnectionType.client => const ClientContent(),
-            ConnectionType.server => const ServerContent(),
-          },
+          child: Padding(
+            padding: EdgeInsetsGeometry.all(16),
+            child: switch (connectionType.value) {
+              ConnectionType.client => const ClientContent(),
+              ConnectionType.server => const ServerContent(),
+            },
+          ),
         ),
       ],
     );
@@ -102,7 +106,7 @@ class _ModeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? theme.colorScheme.surfaceContainerHighest.withOpacity(0.7)
-              : theme.colorScheme.surface.withOpacity(0.7),
+              : theme.colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? theme.colorScheme.primary : Colors.transparent,
