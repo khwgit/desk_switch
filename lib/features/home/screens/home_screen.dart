@@ -3,6 +3,7 @@ import 'package:desk_switch/features/home/widgets/server_content.dart';
 import 'package:desk_switch/shared/models/connection.dart';
 import 'package:desk_switch/shared/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -12,9 +13,11 @@ class HomeScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final connectionType = ref.watch(
-      appStateProvider.select(
-        (state) => state.connection?.type ?? ConnectionType.client,
+    final connectionType = useState(
+      ref.watch(
+        appStateProvider.select(
+          (state) => state.connection?.type ?? ConnectionType.client,
+        ),
       ),
     );
 
@@ -23,41 +26,43 @@ class HomeScreen extends HookConsumerWidget {
         // Custom Mode Selection Cards
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Row(
-            children: [
-              // Client Mode Card
-              Expanded(
-                child: _ModeCard(
-                  selected: connectionType == ConnectionType.client,
-                  icon: Icons.input,
-                  iconBg: theme.colorScheme.primary,
-                  title: 'Client Mode',
-                  subtitle: 'Use another computer\'s mouse and keyboard',
-                  onTap: () {
-                    // uiMode.value = AppMode.client;
-                  },
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                // Client Mode Card
+                Expanded(
+                  child: _ModeCard(
+                    selected: connectionType.value == ConnectionType.client,
+                    icon: Icons.input,
+                    iconBg: theme.colorScheme.primary,
+                    title: 'Client Mode',
+                    subtitle: 'Use another computer\'s mouse and keyboard',
+                    onTap: () {
+                      connectionType.value = ConnectionType.client;
+                    },
+                  ),
                 ),
-              ),
-              const Gap(12),
-              // Server Mode Card
-              Expanded(
-                child: _ModeCard(
-                  selected: connectionType == ConnectionType.server,
-                  icon: Icons.dns,
-                  iconBg: theme.colorScheme.secondary,
-                  title: 'Server Mode',
-                  subtitle: 'Share this computer\'s mouse and keyboard',
-                  onTap: () {
-                    // uiMode.value = AppMode.server;
-                  },
+                const Gap(12),
+                // Server Mode Card
+                Expanded(
+                  child: _ModeCard(
+                    selected: connectionType.value == ConnectionType.server,
+                    icon: Icons.dns,
+                    iconBg: theme.colorScheme.secondary,
+                    title: 'Server Mode',
+                    subtitle: 'Share this computer\'s mouse and keyboard',
+                    onTap: () {
+                      connectionType.value = ConnectionType.server;
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         // Mode-specific Content
         Expanded(
-          child: switch (connectionType) {
+          child: switch (connectionType.value) {
             ConnectionType.client => const ClientContent(),
             ConnectionType.server => const ServerContent(),
           },
@@ -114,7 +119,6 @@ class _ModeCard extends StatelessWidget {
               : [],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               decoration: BoxDecoration(
@@ -128,28 +132,34 @@ class _ModeCard extends StatelessWidget {
                 size: 20,
               ),
             ),
-            const Gap(8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: selected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface,
+            const Gap(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: selected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface,
+                    ),
                   ),
-                ),
-                const Gap(2),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  const Gap(2),
+                  Flexible(
+                    child: Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
