@@ -29,4 +29,5 @@
     "firebase-debug.log": "*-debug.log"
   },
   "dart.flutterGenerateLocalizationsOnSave": "allIfDirty",
+  "cmake.ignoreCMakeListsMissing": true,
 }

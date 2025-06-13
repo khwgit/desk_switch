@@ -1,0 +1,171 @@
+{
+  "Json Class": {
+    "prefix": "jsonC",
+    "body": [
+      "@JsonSerializable()",
+      "class ${1:Name} {",
+      "  ${1:Name}();",
+      "",
+      "  factory ${1:Name}.fromJson(Map<String, dynamic> json) => _$${1:Name}FromJson(json);",
+      "",
+      "  Map<String, dynamic> toJson() => _$${1:Name}ToJson(this);",
+      "}"
+    ],
+    "description": "Json Class"
+  },
+  "Freezed Header": {
+    "prefix": "freeH",
+    "body": [
+      "import 'package:freezed_annotation/freezed_annotation.dart';",
+      "",
+      "part '$TM_FILENAME_BASE.freezed.dart';",
+      ""
+    ]
+  },
+  "Freezed Class": {
+    "prefix": "freeC",
+    "body": [
+      "@freezed",
+      "class ${1:Name} with _$${1:Name} {",
+      "  const ${1:Name}._();",
+      "  const factory ${1:Name}({${2:Param}}) = _${1:Name};",
+      "}",
+      "$0"
+    ],
+    "description": "Freezed Class"
+  },
+  "Freezed with Json Header": {
+    "prefix": "freeJsonH",
+    "body": [
+      "import 'package:freezed_annotation/freezed_annotation.dart';",
+      "",
+      "part '$TM_FILENAME_BASE.freezed.dart';",
+      "part '$TM_FILENAME_BASE.g.dart';",
+      ""
+    ]
+  },
+  "Freezed Class with Json": {
+    "prefix": "freeJsonC",
+    "body": [
+      "@freezed",
+      "class ${1:Name} with _$${1:Name} {",
+      "  const ${1:Name}._();",
+      "  const factory ${1:Name}({${2:Param}}) = _${1:Name};",
+      "",
+      "  factory ${1:Name}.fromJson(Map<String, dynamic> json) =>",
+      "      _$${1:Name}FromJson(json);",
+      "}",
+      "$0"
+    ],
+    "description": "Freezed Class with Json"
+  },
+  "Tailor Header": {
+    "prefix": "tailH",
+    "body": [
+      "import 'package:flutter/material.dart';",
+      "import 'package:theme_tailor_annotation/theme_tailor_annotation.dart';",
+      "",
+      "import 'internal/base.dart';",
+      "",
+      "part '$TM_FILENAME_BASE.tailor.dart';",
+      ""
+    ]
+  },
+  "Tailor Class": {
+    "prefix": "tailC",
+    "body": [
+      "class ${1:Name} extends ThemeWidget<${1:Name}Data> {",
+      "  static ${1:Name}Data of(BuildContext context) => Theme.of(context).extension<${1:Name}Data>()!;",
+      "",
+      "  const ${1:Name}({",
+      "    super.key,",
+      "    required super.data,",
+      "    required super.child,",
+      "  });",
+      "}",
+      "",
+      "@TailorMixin()",
+      "class ${1:Name}Data extends ThemeExtension<${1:Name}Data> with _$${1:Name}DataTailorMixin {",
+      "  const ${1:Name}Data();",
+      "}",
+      "$0"
+    ],
+    "description": "Tailor Class"
+  },
+  "Localizations Class": {
+    "prefix": "l10nC",
+    "body": [
+      "import 'package:flutter/widgets.dart';",
+      "",
+      "import 'internal/base.dart';",
+      "",
+      "class ${1:Name}LocalizationsDelegate",
+      "    extends LocalizationsDelegateBase<${1:Name}Localizations> {",
+      "  const ${1:Name}LocalizationsDelegate();",
+      "",
+      "  @override",
+      "  Future<${1:Name}Localizations> load(Locale locale) async {",
+      "    return const ${1:Name}Localizations();",
+      "  }",
+      "}",
+      "",
+      "class ${1:Name}Localizations {",
+      "  const ${1:Name}Localizations();",
+      "  static ${1:Name}Localizations of(BuildContext context) =>",
+      "      Localizations.of<${1:Name}Localizations>(",
+      "        context,",
+      "        ${1:Name}Localizations,",
+      "      )!;",
+      "  ",
+      "  $0",
+      "}",
+      ""
+    ],
+    "description": "Localizations Class"
+  },
+  "part.g.dart": {
+    "prefix": "partG",
+    "body": "part '$TM_FILENAME_BASE.g.dart';"
+  },
+  "part.freezed.dart": {
+    "prefix": "partFreezed",
+    "body": "part '$TM_FILENAME_BASE.freezed.dart';"
+  },
+  "part.tailor.dart": {
+    "prefix": "partTailor",
+    "body": "part '$TM_FILENAME_BASE.tailor.dart';"
+  },
+  "Theme from context": {
+    "prefix": "theme",
+    "body": [
+      "final theme = Theme.of(context);",
+      "final texts = theme.textTheme;",
+      "final colors = theme.colorScheme;"
+    ]
+  },
+  "Form field": {
+    "prefix": "formField",
+    "body": [
+      "class ${1:Name}FormField extends HookWidget {",
+      "  const ${1:Name}FormField({",
+      "    super.key,",
+      "    required this.initialValue,",
+      "    required this.onChanged,",
+      "  });",
+      "",
+      "  final ${1:Name}Data initialValue;",
+      "  final ValueChanged<${1:Name}Data> onChanged;",
+      "",
+      "  @override",
+      "  Widget build(BuildContext context) {",
+      "    final notifier = useValueChangedNotifier(initialValue, onChanged);",
+      "",
+      "    return Container();",
+      "  }",
+      "}",
+      "",
+      ""
+    ],
+    "description": "Form field"
+  }
+}
