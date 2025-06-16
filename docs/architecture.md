@@ -7,81 +7,299 @@ This document defines the architecture, coding standards, and structural rules f
 
 ```
 lib/
-├── core/                      # Core functionality and utilities
-│   ├── constants/            # Application-wide constants
-│   ├── errors/              # Custom error types and handlers
-│   ├── network/             # Network-related utilities
-│   └── utils/               # General utility functions
-│
-├── features/                 # Feature-based modules
-│   ├── example_feature/     # Example feature (template for all features)
-│   │   ├── data/           # Data layer
-│   │   │   ├── datasources/    # Data sources (remote/local)
-│   │   │   │   ├── remote/     # Remote data sources (API, WebSocket, etc.)
-│   │   │   │   └── local/      # Local data sources (SharedPreferences, SQLite, etc.)
-│   │   │   ├── models/         # Data models (DTOs)
-│   │   │   │   ├── example_model.dart
-│   │   │   │   └── example_model_mapper.dart
-│   │   │   └── repositories/   # Repository implementations
-│   │   │       └── example_repository_impl.dart
-│   │   │
-│   │   ├── domain/         # Domain layer
-│   │   │   ├── entities/       # Business objects
-│   │   │   │   └── example_entity.dart
-│   │   │   ├── repositories/   # Repository interfaces
-│   │   │   │   └── example_repository.dart
-│   │   │   └── usecases/       # Business logic
-│   │   │       ├── get_example.dart
-│   │   │       └── update_example.dart
-│   │   │
-│   │   └── presentation/   # Presentation layer
-│   │       ├── screens/        # Screen widgets
-│   │       │   └── example_screen.dart
-│   │       ├── widgets/        # Feature-specific widgets
-│   │       │   ├── example_list_widget.dart
-│   │       │   └── example_form_widget.dart
-│   │       └── providers/      # Feature-specific providers
-│   │           ├── example_provider.dart
-│   │           └── example_state.dart
-│   │
-│   └── [other_features]/   # Other features follow the same structure
-│
-└── shared/                  # Shared resources
-    ├── models/             # Shared data models
-    ├── providers/          # Global providers
-    ├── router/             # Navigation configuration
-    ├── theme/              # App theme and styling
-    └── widgets/            # Shared widgets
+├── core/                       # Core functionality and constants
+│   └── constants/              # Application-wide constants
+│   ├── errors/                 # Custom error types and handlers
+│   └── utils/                  # General utility functions
+├── features/                   # Feature modules
+│   ├── app/                    # Application-wide features
+│   │   ├── screens/            # App-level screens (scaffold, etc.)
+│   │   └── widgets/            # App-level widgets (navigation, status bar)
+│   └── exmaple_feature/        # Example feature (template for all features)
+│       ├── models/             # Feature-specific models
+│       ├── providers/          # Feature-specific providers
+│       ├── screens/            # Feature screens
+│       ├── themes/             # Feature-specific themes
+│       └── widgets/            # Feature widgets
+├── l10n/                       # Localization
+├── modules/                    # Reusable modules
+│   └── go_router_maker/        # GoRouter code generation
+├── shared/                     # Shared resources
+│   ├── models/                 # Shared models
+│   ├── providers/              # Shared providers
+│   ├── router/                 # Navigation configuration
+│   │   ├── app_router.dart     # Main router configuration
+│   │   ├── routes.dart         # Route tree and path configuration
+│   │   └── transitions.dart    # Custom page transitions
+│   ├── theme/                  # App theme and styling
+│   │   ├── app_theme.dart      # Theme data and configuration
+│   │   ├── color_schemes.dart  # Color palette definitions
+│   │   └── text_themes.dart    # Typography styles
+│   ├── services/               # Shared services
+│   └── services/               # Shared widgets
+└── main.dart                   # Application entry point
 ```
 
-### Feature Module Template
-Each feature should follow the structure of the example feature above. This ensures consistency across the application and makes it easier to:
-- Understand the codebase
-- Add new features
-- Maintain existing features
-- Test components
-- Share code between features
+## Architecture Overview
 
-The example feature demonstrates:
-1. **Clear Separation of Concerns**
-   - Data layer for external communication
-   - Domain layer for business logic
-   - Presentation layer for UI
+### Core Principles
+- Feature-first architecture
+- Clear separation of concerns
+- Dependency injection using Riverpod
+- Code generation for boilerplate reduction
 
-2. **Proper File Organization**
-   - Each file has a single responsibility
-   - Related files are grouped together
-   - Clear naming conventions
+### Feature Modules
+Each feature module is self-contained and follows a consistent structure:
+- `models/`: Data models specific to the feature
+- `providers/`: State management using Riverpod
+- `screens/`: Full screens/pages
+- `widgets/`: Reusable UI components
 
-3. **State Management**
-   - Feature-specific providers
-   - Clear state definitions
-   - Proper dependency injection
+### Shared Resources
+The `shared/` directory contains resources used across multiple features:
+- `models/`: Shared data models
+- `providers/`: Global state management
+- `router/`: Navigation configuration and route definitions
+- `theme/`: Application theming and styling
+  - `app_theme.dart`: Theme data and configuration
+  - `color_schemes.dart`: Color palette definitions
+  - `text_themes.dart`: Typography styles
+  - `component_themes.dart`: Widget-specific themes
+- `services/`: Common services (network, storage, etc.)
 
-4. **Testing Structure**
-   - Each layer can be tested independently
-   - Clear boundaries for unit tests
-   - Easy to mock dependencies
+### Core Module
+The `core/` directory contains application-wide constants and utilities:
+- `constants/`: Application-wide constants and configurations
+
+### Modules
+The `modules/` directory contains reusable code that can be used across features:
+- `go_router_maker/`: Custom code generation for GoRouter
+
+## State Management
+
+### Global State
+- Uses Riverpod for state management
+- Global state providers in `shared/providers/`
+- Feature-specific state in feature's `providers/` directory
+
+### State Organization
+1. **App State** (`shared/providers/app_state_provider.dart`)
+   - Application-wide state
+   - Connection status
+   - Mode selection
+
+2. **Feature State** (e.g., `features/home/providers/`)
+   - Feature-specific state
+   - Server discovery
+   - Connection management
+
+## Navigation
+
+### Router Configuration
+- Uses GoRouter for navigation with a custom `go_router_maker` package
+- Routes defined in `shared/router/routes.dart`
+- Provides type-safe route construction and navigation
+- Enables static syntax checking for available routes
+
+### Route Structure
+Routes are defined using a declarative approach in `AppRoute` class:
+```dart
+class AppRoute {
+  List<RouteBase> get routes => [
+    $app.$route(
+      branches: [
+        StatefulShellBranch(
+          routes: [
+            home.$route(
+              path: '/',
+              location: (data) => '/',
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            settings.$route(
+              path: '/settings',
+              location: (data) => '/settings',
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            user.$route(
+              path: '/user/:userId',
+              location: (data) => GoRouteData.$location(
+                '/user/${data.id}',
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ];
+
+  final $app = StatefulShellRouteMaker.indexedStack(
+    builder: (context, state, data, shell) => AppScaffold(
+      shell: shell,
+    ),
+  );
+
+  final home = RouteMaker(
+    builder: (context, state, data) => const HomeScreen(),
+  );
+
+  final settings = RouteMaker(
+    builder: (context, state, data) => const SettingsScreen(),
+  );
+
+  final user = DataRouteMaker(
+    data: (state) => UserRoute(state.pathParameters['userId']),
+    builder: (context, state, data) => UserScreen(data.id),
+  );
+}
+```
+
+### Route Navigation
+Routes are accessed through a provider and used for navigation:
+
+1. **Access Routes**
+```dart
+final appRoute = ref.watch(appRouteProvider);
+```
+
+2. **Navigate to Routes**
+```dart
+// Navigate to settings
+appRoute.settings().go(context);
+
+// Navigate to home
+appRoute.home().go(context);
+```
+
+### Route Parameters and Data Passing
+Routes can be defined to accept parameters and pass data:
+
+1. **Define a Route with Parameters**
+```dart
+// Define the route data class
+class UserRoute extends GoRouteData {
+  UserRoute(this.id);
+  final String? id;
+}
+
+// Define the route in AppRoute
+class AppRoute {
+  List<RouteBase> get routes => [
+    $app.$route(
+      branches: [
+        // ... other branches ...
+        StatefulShellBranch(
+          routes: [
+            user.$route(
+              path: '/user/:userId',
+              location: (data) => GoRouteData.$location(
+                '/user/${data.id}',
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ];
+
+  // ... other routes ...
+
+  final user = DataRouteMaker(
+    data: (state) => UserRoute(state.pathParameters['userId']),
+    builder: (context, state, data) => UserScreen(data.id),
+  );
+}
+```
+
+2. **Navigate with Parameters**
+```dart
+// Navigate to user route with parameter
+appRoute.user(UserRoute('123')).go(context);
+
+// The URL will be: /user/123
+```
+
+3. **Access Parameters in Screen**
+```dart
+class UserScreen extends StatelessWidget {
+  const UserScreen(this.id);
+  final String? id;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Text('User ID: $id');
+  }
+}
+```
+
+The key points to remember when defining a route with parameters:
+1. Define a `GoRouteData` class to hold the route parameters
+2. Add the route to the route tree using `$route` with the appropriate path pattern
+3. Define the route using `DataRouteMaker` to handle parameter parsing
+4. Use the route data class when navigating
+
+### Benefits of go_router_maker
+- **Type Safety**: Routes are defined as class members, enabling static type checking
+- **Code Organization**: Route definitions are centralized and structured
+- **IDE Support**: Better autocomplete and navigation support
+- **Maintainability**: Easier to manage and modify route structure
+- **Consistency**: Enforces consistent route naming and structure
+
+## Localization
+
+- Uses Flutter's built-in localization
+- Translation files in `l10n/`
+- Generated code for type-safe access
+
+## Dependencies
+
+### State Management
+- `hooks_riverpod`: State management
+- `flutter_hooks`: Widget-level state management
+
+### Navigation
+- `go_router`: Routing
+- Custom code generation for type safety
+
+### Code Generation
+- `freezed`: Immutable models
+- `json_serializable`: JSON serialization
+- `build_runner`: Code generation
+
+### UI
+- `gap`: Spacing utilities
+- `window_manager`: Desktop window management
+
+## Development Guidelines
+
+### Code Organization
+1. Keep feature-specific code within the feature module
+2. Use shared resources for common functionality
+3. Follow consistent naming conventions
+4. Document public APIs
+
+### State Management
+1. Use appropriate provider types:
+   - `Provider` for dependencies
+   - `StateProvider` for simple state
+   - `StateNotifierProvider` for complex state
+   - `StreamProvider` for streams
+2. Keep state as local as possible
+3. Use auto-dispose when appropriate
+
+### Widget Structure
+1. Separate business logic from UI
+2. Use composition over inheritance
+3. Keep widgets focused and reusable
+4. Use appropriate widget types:
+   - `StatelessWidget` for static UI
+   - `HookConsumerWidget` for stateful UI with Riverpod
+   - `HookWidget` for stateful UI without Riverpod
 
 ## Architectural Principles
 
