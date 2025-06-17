@@ -44,6 +44,7 @@ class DeskSwitchApp extends ConsumerWidget {
       ),
       navigationRailTheme: NavigationRailThemeData(
         minWidth: 72,
+        minExtendedWidth: 196,
       ),
     );
 
