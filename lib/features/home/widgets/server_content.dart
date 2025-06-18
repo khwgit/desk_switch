@@ -15,95 +15,85 @@ class ServerContent extends HookConsumerWidget {
       ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Profile Selection Section
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Configuration Profile',
-                        style: theme.textTheme.titleLarge,
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pushNamed('/server/profiles');
-                        },
-                        icon: const Icon(Icons.edit),
-                        tooltip: 'Edit Profiles',
-                      ),
-                    ],
-                  ),
-                  const Gap(16),
-                  // if (appState.profiles.isEmpty)
-                  //   const Text('No profiles available')
-                  // else
-                  //   DropdownButtonFormField<String>(
-                  //     value: appState.activeProfile?.id,
-                  //     decoration: const InputDecoration(
-                  //       labelText: 'Select Profile',
-                  //     ),
-                  //     items: appState.profiles.map((profile) {
-                  //       return DropdownMenuItem(
-                  //         value: profile.id,
-                  //         child: Text(profile.name),
-                  //       );
-                  //     }).toList(),
-                  //     onChanged: (profileId) {
-                  //       if (profileId != null) {
-                  //         final profile = appState.profiles.firstWhere(
-                  //           (p) => p.id == profileId,
-                  //         );
-                  //         ref
-                  //             .read(appStateProvider.notifier)
-                  //             .setActiveProfile(profile);
-                  //       }
-                  //     },
-                  //   ),
-                ],
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Start/Stop Button Section
-          Center(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Profile Selection Section
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FilledButton.icon(
-                  onPressed: null,
-                  // onPressed: isServerRunning
-                  //     ? () {
-                  //         // TODO: Implement stop server
-                  //       }
-                  //     : appState.activeProfile == null
-                  //     ? null
-                  //     : () {
-                  //         // TODO: Implement start server
-                  //       },
-                  icon: Icon(isServerRunning ? Icons.stop : Icons.play_arrow),
-                  label: Text(isServerRunning ? 'Stop' : 'Start Server'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Configuration Profile',
+                      style: theme.textTheme.titleLarge,
                     ),
-                  ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pushNamed('/server/profiles');
+                      },
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Edit Profiles',
+                    ),
+                  ],
                 ),
+                const Gap(16),
+                // if (appState.profiles.isEmpty)
+                //   const Text('No profiles available')
+                // else
+                //   DropdownButtonFormField<String>(
+                //     value: appState.activeProfile?.id,
+                //     decoration: const InputDecoration(
+                //       labelText: 'Select Profile',
+                //     ),
+                //     items: appState.profiles.map((profile) {
+                //       return DropdownMenuItem(
+                //         value: profile.id,
+                //         child: Text(profile.name),
+                //       );
+                //     }).toList(),
+                //     onChanged: (profileId) {
+                //       if (profileId != null) {
+                //         final profile = appState.profiles.firstWhere(
+                //           (p) => p.id == profileId,
+                //         );
+                //         ref
+                //             .read(appStateProvider.notifier)
+                //             .setActiveProfile(profile);
+                //       }
+                //     },
+                //   ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        // Start/Stop Button Section
+        FilledButton.icon(
+          onPressed: null,
+          // onPressed: isServerRunning
+          //     ? () {
+          //         // TODO: Implement stop server
+          //       }
+          //     : appState.activeProfile == null
+          //     ? null
+          //     : () {
+          //         // TODO: Implement start server
+          //       },
+          icon: Icon(isServerRunning ? Icons.stop : Icons.play_arrow),
+          label: Text(isServerRunning ? 'Stop' : 'Start Server'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32,
+              vertical: 16,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
