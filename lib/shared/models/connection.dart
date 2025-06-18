@@ -24,6 +24,7 @@ sealed class Connection with _$Connection {
   const factory Connection.client({
     required String id,
     @Default(ConnectionStatus.disconnected) ConnectionStatus status,
+    String? connectedServerId,
   }) = ClientConnection;
 
   /// Server connection
@@ -40,6 +41,7 @@ abstract class ClientConnection with _$ClientConnection implements Connection {
   const factory ClientConnection({
     required String id,
     @Default(ConnectionStatus.disconnected) ConnectionStatus status,
+    String? connectedServerId,
   }) = _ClientConnection;
 
   @override

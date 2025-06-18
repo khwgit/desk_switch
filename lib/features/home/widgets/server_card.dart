@@ -9,12 +9,14 @@ class ServerCard extends StatelessWidget {
     required this.isBookmarked,
     required this.onTap,
     required this.onBookmarkToggle,
+    this.isConnected = false,
   });
 
   final ServerInfo server;
   final bool isBookmarked;
   final VoidCallback onTap;
   final VoidCallback onBookmarkToggle;
+  final bool isConnected;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class ServerCard extends StatelessWidget {
       leading: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 2, bottom: 2),
+            padding: const EdgeInsets.only(right: 4, bottom: 4),
             child: Icon(
               Icons.computer,
               color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -44,16 +46,7 @@ class ServerCard extends StatelessWidget {
                 color: theme.colorScheme.surfaceContainerLow,
                 shape: BoxShape.circle,
               ),
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: server.isOnline
-                      ? Colors.green
-                      : theme.colorScheme.outlineVariant,
-                  shape: BoxShape.circle,
-                ),
-              ),
+              child: _buildStatusIndicator(theme),
             ),
           ),
         ],
@@ -96,6 +89,48 @@ class ServerCard extends StatelessWidget {
       ),
       onTap: onTap,
     );
+  }
+
+  Widget _buildStatusIndicator(ThemeData theme) {
+    const size = 10.0;
+
+    if (isConnected) {
+      // Show blue connected icon
+      return Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.check,
+          size: size - 2,
+          color: theme.colorScheme.surfaceContainerLow,
+        ),
+      );
+    } else if (server.isOnline) {
+      // Show green dot for online
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Colors.green,
+          shape: BoxShape.circle,
+        ),
+      );
+    } else {
+      // Show outline variant dot for offline
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.outlineVariant,
+          shape: BoxShape.circle,
+        ),
+      );
+    }
   }
 
   String _formatLastSeen(String lastSeen) {

@@ -49,7 +49,13 @@ class ClientContent extends HookConsumerWidget {
                 selectedServer: discoveryState.selectedServer,
                 isClientRunning: isClientRunning,
                 onConnect: () {
-                  ref.read(appStateProvider.notifier).startClient();
+                  if (discoveryState.selectedServer != null) {
+                    ref
+                        .read(appStateProvider.notifier)
+                        .connectToServer(
+                          discoveryState.selectedServer!.id,
+                        );
+                  }
                 },
                 onDisconnect: () {
                   ref.read(appStateProvider.notifier).stopClient();
@@ -161,6 +167,7 @@ class _ServerSelection extends HookConsumerWidget {
                   return ServerCard(
                     server: server,
                     isBookmarked: isBookmarked,
+                    isConnected: _isServerConnected(ref, server.id),
                     onTap: () => onServerSelected(server),
                     onBookmarkToggle: () {
                       final newBookmarks = Set<String>.from(
@@ -304,6 +311,18 @@ class _ServerSelection extends HookConsumerWidget {
     Future.delayed(const Duration(milliseconds: 100), () {
       ref.invalidate(serverDiscoveryProvider);
     });
+  }
+
+  bool _isServerConnected(WidgetRef ref, String serverId) {
+    final connection = ref.watch(
+      appStateProvider.select((state) => state.connection),
+    );
+
+    if (connection is ClientConnection) {
+      return connection.isConnected && connection.connectedServerId == serverId;
+    }
+
+    return false;
   }
 }
 

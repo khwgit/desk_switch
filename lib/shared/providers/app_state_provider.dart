@@ -18,7 +18,34 @@ class AppStateNotifier extends Notifier<AppState> {
     );
   }
 
-  void stopClient() {}
+  void connectToServer(String serverId) {
+    // Ensure client is started first
+    if (state.connection is! ClientConnection) {
+      startClient();
+    }
+
+    if (state.connection is ClientConnection) {
+      final clientConnection = state.connection as ClientConnection;
+      state = state.copyWith(
+        connection: clientConnection.copyWith(
+          status: ConnectionStatus.connected,
+          connectedServerId: serverId,
+        ),
+      );
+    }
+  }
+
+  void stopClient() {
+    if (state.connection is ClientConnection) {
+      final clientConnection = state.connection as ClientConnection;
+      state = state.copyWith(
+        connection: clientConnection.copyWith(
+          status: ConnectionStatus.disconnected,
+          connectedServerId: null,
+        ),
+      );
+    }
+  }
 
   void startServer() {
     state = state.copyWith(
