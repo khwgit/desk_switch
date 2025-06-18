@@ -1,0 +1,10 @@
+name: desk_switch_test_server
+description: Test server for DeskSwitch server discovery
+version: 1.0.0
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  uuid: ^4.0.0
+  freezed_annotation: ^3.0.0
