@@ -185,11 +185,38 @@ class _ServerSelection extends HookConsumerWidget {
             error: (error, stack) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Error: $error',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: theme.colorScheme.error,
+                    ),
+                    const Gap(16),
+                    Text(
+                      'Server discovery failed',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                    const Gap(8),
+                    Text(
+                      'Unable to discover servers on the network',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const Gap(16),
+                    FilledButton.icon(
+                      onPressed: () {
+                        ref.invalidate(serverDiscoveryProvider);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -271,10 +298,14 @@ class _ServerSelection extends HookConsumerWidget {
   }
 
   void _refreshServerList(WidgetRef ref, Set<String> bookmarkedServers) {
-    // Since the server discovery service automatically manages server status,
-    // we'll just trigger a rebuild to show the current filtered state
-    // The filtering will be done in the UI when displaying servers
-    ref.invalidate(serverDiscoveryProvider);
+    // Stop the current discovery session to clean up the socket
+    final service = ref.read(serverDiscoveryServiceProvider);
+    service.stopDiscovery();
+
+    // Wait a moment for cleanup, then restart discovery
+    Future.delayed(const Duration(milliseconds: 100), () {
+      ref.invalidate(serverDiscoveryProvider);
+    });
   }
 }
 

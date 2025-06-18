@@ -11,9 +11,15 @@ class ServerDiscoveryService {
   static const _cleanupInterval = Duration(seconds: 2);
   static const _multicastAddress = '239.255.255.250';
 
+  StreamSubscription<ServerInfo>? _activeSubscription;
+  Timer? _cleanupTimer;
+  StreamController<List<ServerInfo>>? _controller;
+  RawDatagramSocket? _socket;
+  bool _isRunning = false;
+
   /// Listens for server signals (broadcast/multicast) to discover available servers
   Stream<ServerInfo> listenForServers() async* {
-    final socket = await RawDatagramSocket.bind(
+    _socket = await RawDatagramSocket.bind(
       InternetAddress.anyIPv4,
       _discoveryPort,
     );
@@ -21,7 +27,7 @@ class ServerDiscoveryService {
     // Join multicast group for better cross-router discovery
     try {
       final multicastGroup = InternetAddress(_multicastAddress);
-      socket.joinMulticast(multicastGroup);
+      _socket!.joinMulticast(multicastGroup);
       debugPrint('Successfully joined multicast group: $_multicastAddress');
     } catch (e) {
       debugPrint('Warning: Could not join multicast group: $e');
@@ -29,9 +35,9 @@ class ServerDiscoveryService {
     }
 
     try {
-      await for (final event in socket) {
+      await for (final event in _socket!) {
         if (event == RawSocketEvent.read) {
-          final datagram = socket.receive();
+          final datagram = _socket!.receive();
           if (datagram == null) continue;
 
           final message = String.fromCharCodes(datagram.data);
@@ -56,7 +62,8 @@ class ServerDiscoveryService {
         }
       }
     } finally {
-      socket.close();
+      // Don't close socket here as it's managed by stopDiscovery
+      // _socket!.close();
     }
   }
 
@@ -91,18 +98,24 @@ class ServerDiscoveryService {
 
   /// Starts listening for server signals and manages server list
   Stream<List<ServerInfo>> startDiscovery() async* {
+    // Stop any existing discovery session
+    stopDiscovery();
+
     final servers = <String, ServerInfo>{};
-    Timer? cleanupTimer;
-    StreamSubscription<ServerInfo>? serverSubscription;
-    final controller = StreamController<List<ServerInfo>>();
+    _controller = StreamController<List<ServerInfo>>();
+    _isRunning = true;
+
+    debugPrint('Starting server discovery...');
 
     // Emit empty list initially
     yield <ServerInfo>[];
 
     try {
       // Start listening for server signals
-      serverSubscription = listenForServers().listen(
+      _activeSubscription = listenForServers().listen(
         (server) {
+          if (!_isRunning) return; // Don't process if stopped
+
           // Check if this server already exists
           final existingServer = servers[server.id];
           if (existingServer != null) {
@@ -120,15 +133,18 @@ class ServerDiscoveryService {
             // Add new server
             servers[server.id] = server;
           }
-          controller.add(servers.values.toList());
+          _controller?.add(servers.values.toList());
         },
         onError: (error) {
           debugPrint('Error in server discovery: $error');
+          _controller?.addError(error);
         },
       );
 
       // Start periodic cleanup timer
-      cleanupTimer = Timer.periodic(_cleanupInterval, (timer) {
+      _cleanupTimer = Timer.periodic(_cleanupInterval, (timer) {
+        if (!_isRunning) return; // Don't process if stopped
+
         final now = DateTime.now();
         bool hasChanges = false;
 
@@ -147,16 +163,51 @@ class ServerDiscoveryService {
 
         // Emit updated list if there were changes
         if (hasChanges) {
-          controller.add(servers.values.toList());
+          _controller?.add(servers.values.toList());
         }
       });
 
       // Yield the stream of server lists
-      yield* controller.stream;
+      yield* _controller!.stream;
     } finally {
-      cleanupTimer?.cancel();
-      serverSubscription?.cancel();
-      controller.close();
+      if (_isRunning) {
+        stopDiscovery();
+      }
     }
   }
+
+  /// Stops the current discovery session and cleans up resources
+  void stopDiscovery() {
+    if (!_isRunning) return;
+
+    debugPrint('Stopping server discovery...');
+    _isRunning = false;
+
+    _activeSubscription?.cancel();
+    _activeSubscription = null;
+
+    _cleanupTimer?.cancel();
+    _cleanupTimer = null;
+
+    _controller?.close();
+    _controller = null;
+
+    // Leave multicast group and close socket
+    if (_socket != null) {
+      try {
+        final multicastGroup = InternetAddress(_multicastAddress);
+        _socket!.leaveMulticast(multicastGroup);
+        debugPrint('Left multicast group: $_multicastAddress');
+      } catch (e) {
+        debugPrint('Warning: Could not leave multicast group: $e');
+      }
+      _socket!.close();
+      _socket = null;
+    }
+
+    debugPrint('Server discovery stopped');
+  }
+
+  /// Checks if discovery is currently running
+  bool get isRunning => _isRunning;
 }
