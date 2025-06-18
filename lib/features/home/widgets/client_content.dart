@@ -13,7 +13,6 @@ class ClientContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final isClientRunning = ref.watch(
       appStateProvider.select(
         (state) => state.connection is ClientConnection,
@@ -66,7 +65,6 @@ class ClientContent extends HookConsumerWidget {
 
 class _ServerSelection extends HookConsumerWidget {
   const _ServerSelection({
-    super.key,
     required this.selectedServer,
     required this.onServerSelected,
   });
