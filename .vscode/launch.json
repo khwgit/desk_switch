@@ -7,13 +7,15 @@
     {
       "name": "app",
       "request": "launch",
-      "type": "dart"
+      "type": "dart",
+      "program": "lib/main.dart",
     },
     {
       "name": "app.profile",
       "request": "launch",
       "type": "dart",
       "flutterMode": "profile",
+      "program": "lib/main.dart",
       "args": [
         // "--dart-define-from-file=env.production.json",
       ],
@@ -23,6 +25,7 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "release",
+      "program": "lib/main.dart",
       "args": [
         // "--dart-define-from-file=env.production.json",
       ],
