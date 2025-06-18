@@ -28,8 +28,8 @@ class ServerCard extends StatelessWidget {
       selectedTileColor: theme.colorScheme.primaryContainer,
       leading: Stack(
         children: [
-          SizedBox.square(
-            dimension: 28,
+          Padding(
+            padding: const EdgeInsets.only(right: 2, bottom: 2),
             child: Icon(
               Icons.computer,
               color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -41,15 +41,18 @@ class ServerCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
+                color: theme.colorScheme.surfaceContainerLow,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.circle,
-                size: 8,
-                color: server.isOnline
-                    ? Colors.green
-                    : theme.colorScheme.surface,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: server.isOnline
+                      ? Colors.green
+                      : theme.colorScheme.outlineVariant,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
           ),
