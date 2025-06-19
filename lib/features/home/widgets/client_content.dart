@@ -66,7 +66,6 @@ class _ServerSelection extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final serversStream = ref.watch(serversProvider);
-    final pinned = ref.watch(pinnedServersProvider);
     final pinnedNotifier = ref.read(pinnedServersProvider.notifier);
 
     return Column(

@@ -3,7 +3,6 @@ import 'package:desk_switch/models/connection.dart';
 import 'package:desk_switch/models/server_config.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'app_state.freezed.dart';
 part 'app_state.g.dart';
