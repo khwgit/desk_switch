@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+final appThemeProvider = Provider<AppTheme>((ref) {
+  return AppTheme();
+});
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  ThemeData get lightTheme {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
         seedColor: Colors.blue,
@@ -31,7 +36,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
+  ThemeData get darkTheme {
     return lightTheme.copyWith(
       colorScheme: lightTheme.colorScheme.copyWith(
         brightness: Brightness.dark,

@@ -1,4 +1,4 @@
-import 'package:desk_switch/shared/models/server_info.dart';
+import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
@@ -6,16 +6,16 @@ class ServerCard extends StatelessWidget {
   const ServerCard({
     super.key,
     required this.server,
-    required this.isBookmarked,
+    required this.isPinned,
+    required this.isConnected,
     required this.onTap,
-    required this.onBookmarkToggle,
-    this.isConnected = false,
+    required this.onPinToggle,
   });
 
   final ServerInfo server;
-  final bool isBookmarked;
+  final bool isPinned;
   final VoidCallback onTap;
-  final VoidCallback onBookmarkToggle;
+  final VoidCallback onPinToggle;
   final bool isConnected;
 
   @override
@@ -78,14 +78,14 @@ class ServerCard extends StatelessWidget {
       ),
       trailing: IconButton(
         icon: Icon(
-          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+          isPinned ? Icons.push_pin : Icons.push_pin_outlined,
           size: 20,
-          color: isBookmarked
+          color: isPinned
               ? theme.colorScheme.primary
               : theme.colorScheme.onSurface.withOpacity(0.6),
         ),
-        onPressed: onBookmarkToggle,
-        tooltip: isBookmarked ? 'Remove bookmark' : 'Add bookmark',
+        tooltip: isPinned ? 'Unpin server' : 'Pin server',
+        onPressed: onPinToggle,
       ),
       onTap: onTap,
     );

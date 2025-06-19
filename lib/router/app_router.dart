@@ -1,4 +1,4 @@
-import 'package:desk_switch/shared/router/routes.dart';
+import 'package:desk_switch/router/routes.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 

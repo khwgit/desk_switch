@@ -13,6 +13,7 @@ lib/
 │   └── utils/                  # General utility functions
 ├── features/                   # Feature modules
 │   ├── app/                    # Application-wide features
+│   │   ├── providers/          # App-level providers (app state, etc.)
 │   │   ├── screens/            # App-level screens (scaffold, etc.)
 │   │   └── widgets/            # App-level widgets (navigation, status bar)
 │   └── exmaple_feature/        # Example feature (template for all features)
@@ -24,19 +25,17 @@ lib/
 ├── l10n/                       # Localization
 ├── modules/                    # Reusable modules
 │   └── go_router_maker/        # GoRouter code generation
-├── shared/                     # Shared resources
-│   ├── models/                 # Shared models
-│   ├── providers/              # Shared providers
-│   ├── router/                 # Navigation configuration
-│   │   ├── app_router.dart     # Main router configuration
-│   │   ├── routes.dart         # Route tree and path configuration
-│   │   └── transitions.dart    # Custom page transitions
-│   ├── theme/                  # App theme and styling
-│   │   ├── app_theme.dart      # Theme data and configuration
-│   │   ├── color_schemes.dart  # Color palette definitions
-│   │   └── text_themes.dart    # Typography styles
-│   ├── services/               # Shared services
-│   └── services/               # Shared widgets
+├── models/                     # Shared models
+├── router/                     # Navigation configuration
+│   ├── app_router.dart         # Main router configuration
+│   ├── routes.dart             # Route tree and path configuration
+│   └── transitions.dart        # Custom page transitions
+├── theme/                      # App theme and styling
+│   ├── app_theme.dart          # Theme data and configuration
+│   ├── color_schemes.dart      # Color palette definitions
+│   └── text_themes.dart        # Typography styles
+├── services/                   # Shared services
+├── widgets/                    # Shared widgets
 └── main.dart                   # Application entry point
 ```
 

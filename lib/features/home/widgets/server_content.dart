@@ -1,4 +1,4 @@
-import 'package:desk_switch/shared/providers/app_state_provider.dart';
+import 'package:desk_switch/core/states/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';

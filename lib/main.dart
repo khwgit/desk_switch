@@ -1,6 +1,6 @@
 import 'package:desk_switch/l10n/app_localizations.dart';
-import 'package:desk_switch/shared/router/app_router.dart';
-import 'package:desk_switch/shared/theme/app_theme.dart';
+import 'package:desk_switch/router/app_router.dart';
+import 'package:desk_switch/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
@@ -27,14 +27,15 @@ class DeskSwitchApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final theme = ref.watch(appThemeProvider);
 
     return MaterialApp.router(
       title: 'DeskSwitch',
       routerConfig: router,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: theme.lightTheme,
+      darkTheme: theme.darkTheme,
     );
   }
 }

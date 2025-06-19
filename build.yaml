@@ -10,6 +10,8 @@ targets:
         generate_for:
           include:
             - "**/models/**.dart"
+            - "**/states/**.dart"
+            - "**/errors/**.dart"
       freezed:
         enabled: true
         options:
@@ -20,3 +22,7 @@ targets:
         generate_for:
           include:
             - "**/models/**.dart"
+            - "**/states/**.dart"
+            - "**/errors/**.dart"
+      riverpod_generator:
+        enabled: true

@@ -1,10 +1,7 @@
-import 'package:desk_switch/features/home/providers/server_discovery_provider.dart';
+import 'package:desk_switch/features/home/widgets/client_content_providers.dart';
 import 'package:desk_switch/features/home/widgets/server_card.dart';
-import 'package:desk_switch/shared/models/connection.dart';
-import 'package:desk_switch/shared/models/server_info.dart';
-import 'package:desk_switch/shared/providers/app_state_provider.dart';
+import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -13,14 +10,9 @@ class ClientContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isClientRunning = ref.watch(
-      appStateProvider.select(
-        (state) => state.connection is ClientConnection,
-      ),
-    );
-
-    // Watch server discovery state
-    final discoveryState = ref.watch(serverDiscoveryStateProvider);
+    final selectedServer = ref.watch(selectedServerProvider);
+    // TODO: Replace with a real connection state provider if needed
+    final isClientRunning = false;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -30,11 +22,9 @@ class ClientContent extends HookConsumerWidget {
           flex: 4,
           child: Card(
             child: _ServerSelection(
-              selectedServer: discoveryState.selectedServer,
+              selectedServer: selectedServer,
               onServerSelected: (server) {
-                ref
-                    .read(serverDiscoveryStateProvider.notifier)
-                    .selectServer(server);
+                ref.read(selectedServerProvider.notifier).select(server);
               },
             ),
           ),
@@ -46,19 +36,13 @@ class ClientContent extends HookConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: _ConnectionInfo(
-                selectedServer: discoveryState.selectedServer,
+                selectedServer: selectedServer,
                 isClientRunning: isClientRunning,
                 onConnect: () {
-                  if (discoveryState.selectedServer != null) {
-                    ref
-                        .read(appStateProvider.notifier)
-                        .connectToServer(
-                          discoveryState.selectedServer!.id,
-                        );
-                  }
+                  // TODO: Implement connection logic
                 },
                 onDisconnect: () {
-                  ref.read(appStateProvider.notifier).stopClient();
+                  // TODO: Implement disconnect logic
                 },
               ),
             ),
@@ -81,8 +65,9 @@ class _ServerSelection extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final servers = ref.watch(serverDiscoveryProvider);
-    final bookmarkedServers = useState<Set<String>>({});
+    final serversStream = ref.watch(serversProvider);
+    final pinned = ref.watch(pinnedServersProvider);
+    final pinnedNotifier = ref.read(pinnedServersProvider.notifier);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -99,7 +84,7 @@ class _ServerSelection extends HookConsumerWidget {
             Spacer(),
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () => _refreshServerList(ref, bookmarkedServers.value),
+              onPressed: () => ref.invalidate(serversProvider),
               tooltip: 'Refresh server list (hide offline servers)',
             ),
             IconButton(
@@ -113,17 +98,9 @@ class _ServerSelection extends HookConsumerWidget {
         Gap(4),
         // Available Servers List
         Expanded(
-          child: servers.when(
-            data: (serverList) {
-              // Filter servers to show only online servers or bookmarked servers
-              final filteredServers = serverList.where((server) {
-                final isBookmarked = bookmarkedServers.value.contains(
-                  server.id,
-                );
-                return server.isOnline || isBookmarked;
-              }).toList();
-
-              if (filteredServers.isEmpty) {
+          child: serversStream.when(
+            data: (servers) {
+              if (servers.isEmpty) {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -133,13 +110,13 @@ class _ServerSelection extends HookConsumerWidget {
                         Icon(
                           Icons.wifi_off,
                           size: 48,
-                          color: theme.colorScheme.onSurface.withOpacity(0.4),
+                          color: theme.colorScheme.onSurface.withAlpha(100),
                         ),
                         const Gap(8),
                         Text(
                           'No servers available',
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withAlpha(150),
                           ),
                         ),
                         const Gap(4),
@@ -147,7 +124,7 @@ class _ServerSelection extends HookConsumerWidget {
                           'Waiting for server signals...',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.4),
+                            color: theme.colorScheme.onSurface.withAlpha(100),
                           ),
                         ),
                       ],
@@ -157,28 +134,24 @@ class _ServerSelection extends HookConsumerWidget {
               }
 
               return ListView.builder(
-                itemCount: filteredServers.length,
+                itemCount: servers.length,
                 itemBuilder: (context, index) {
-                  final server = filteredServers[index];
-                  final isBookmarked = bookmarkedServers.value.contains(
-                    server.id,
-                  );
+                  final server = servers[index];
+                  final isPinned = pinnedNotifier.isPinned(server.id);
+                  // TODO: Implement isConnected logic if needed
+                  final isConnected = false;
 
                   return ServerCard(
                     server: server,
-                    isBookmarked: isBookmarked,
-                    isConnected: _isServerConnected(ref, server.id),
+                    isPinned: isPinned,
+                    isConnected: isConnected,
                     onTap: () => onServerSelected(server),
-                    onBookmarkToggle: () {
-                      final newBookmarks = Set<String>.from(
-                        bookmarkedServers.value,
-                      );
-                      if (isBookmarked) {
-                        newBookmarks.remove(server.id);
+                    onPinToggle: () {
+                      if (isPinned) {
+                        pinnedNotifier.unpin(server.id);
                       } else {
-                        newBookmarks.add(server.id);
+                        pinnedNotifier.pin(server.id);
                       }
-                      bookmarkedServers.value = newBookmarks;
                     },
                   );
                 },
@@ -209,14 +182,14 @@ class _ServerSelection extends HookConsumerWidget {
                     Text(
                       'Unable to discover servers on the network',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withAlpha(150),
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const Gap(16),
                     FilledButton.icon(
                       onPressed: () {
-                        ref.invalidate(serverDiscoveryProvider);
+                        ref.invalidate(serversProvider);
                       },
                       icon: const Icon(Icons.refresh),
                       label: const Text('Retry'),
@@ -301,29 +274,6 @@ class _ServerSelection extends HookConsumerWidget {
       ),
     );
   }
-
-  void _refreshServerList(WidgetRef ref, Set<String> bookmarkedServers) {
-    // Stop the current discovery session to clean up the socket
-    final service = ref.read(serverDiscoveryServiceProvider);
-    service.stopDiscovery();
-
-    // Wait a moment for cleanup, then restart discovery
-    Future.delayed(const Duration(milliseconds: 100), () {
-      ref.invalidate(serverDiscoveryProvider);
-    });
-  }
-
-  bool _isServerConnected(WidgetRef ref, String serverId) {
-    final connection = ref.watch(
-      appStateProvider.select((state) => state.connection),
-    );
-
-    if (connection is ClientConnection) {
-      return connection.isConnected && connection.connectedServerId == serverId;
-    }
-
-    return false;
-  }
 }
 
 class _ConnectionInfo extends StatelessWidget {
@@ -380,8 +330,8 @@ class _ConnectionInfo extends StatelessWidget {
                       ? Icons.check_circle
                       : Icons.error_outline,
                   valueColor: selectedServer!.isOnline
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.error,
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.error,
                 ),
               ] else
                 Center(
@@ -390,7 +340,7 @@ class _ConnectionInfo extends StatelessWidget {
                     child: Text(
                       'Select a server to view connection info',
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withAlpha(150),
                       ),
                     ),
                   ),
@@ -447,7 +397,7 @@ class _InfoCard extends StatelessWidget {
                   Text(
                     title,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withAlpha(150),
                     ),
                   ),
                   const Gap(4),

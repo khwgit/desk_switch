@@ -1,7 +1,7 @@
+import 'package:desk_switch/core/states/app_state.dart';
 import 'package:desk_switch/features/home/widgets/client_content.dart';
 import 'package:desk_switch/features/home/widgets/server_content.dart';
-import 'package:desk_switch/shared/models/connection.dart';
-import 'package:desk_switch/shared/providers/app_state_provider.dart';
+import 'package:desk_switch/models/connection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
