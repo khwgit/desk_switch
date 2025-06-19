@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:desk_switch/core/services/client_service.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+part 'client_content_providers.g.dart';
 
 // Notifier for selected server
 class SelectedServerNotifier extends Notifier<ServerInfo?> {
@@ -39,7 +42,8 @@ final pinnedServersProvider =
     );
 
 // Provider for the list of online servers (future: combine with pins)
-final serversProvider = StreamProvider.autoDispose<List<ServerInfo>>((ref) {
+@riverpod
+Stream<List<ServerInfo>> servers(Ref ref) {
   final clientService = ref.read(clientServiceProvider.notifier);
   final pinnedIds = ref.watch(pinnedServersProvider);
   final controller = StreamController<List<ServerInfo>>();
@@ -98,4 +102,4 @@ final serversProvider = StreamProvider.autoDispose<List<ServerInfo>>((ref) {
     controller.close();
   });
   return controller.stream;
-});
+}

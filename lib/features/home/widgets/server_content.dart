@@ -1,4 +1,4 @@
-import 'package:desk_switch/core/states/app_state.dart';
+import 'package:desk_switch/features/home/widgets/server_content_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -9,11 +9,8 @@ class ServerContent extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final isServerRunning = ref.watch(
-      appStateProvider.select(
-        (state) => state.connection is ServerContent,
-      ),
-    );
+    final isServerRunning = ref.watch(serverRunningProvider);
+    final serverService = ref.read(serverServiceProvider.notifier);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -42,31 +39,7 @@ class ServerContent extends HookConsumerWidget {
                   ],
                 ),
                 const Gap(16),
-                // if (appState.profiles.isEmpty)
-                //   const Text('No profiles available')
-                // else
-                //   DropdownButtonFormField<String>(
-                //     value: appState.activeProfile?.id,
-                //     decoration: const InputDecoration(
-                //       labelText: 'Select Profile',
-                //     ),
-                //     items: appState.profiles.map((profile) {
-                //       return DropdownMenuItem(
-                //         value: profile.id,
-                //         child: Text(profile.name),
-                //       );
-                //     }).toList(),
-                //     onChanged: (profileId) {
-                //       if (profileId != null) {
-                //         final profile = appState.profiles.firstWhere(
-                //           (p) => p.id == profileId,
-                //         );
-                //         ref
-                //             .read(appStateProvider.notifier)
-                //             .setActiveProfile(profile);
-                //       }
-                //     },
-                //   ),
+                // Profile selection UI can be added here later
               ],
             ),
           ),
@@ -74,16 +47,15 @@ class ServerContent extends HookConsumerWidget {
         const Spacer(),
         // Start/Stop Button Section
         FilledButton.icon(
-          onPressed: null,
-          // onPressed: isServerRunning
-          //     ? () {
-          //         // TODO: Implement stop server
-          //       }
-          //     : appState.activeProfile == null
-          //     ? null
-          //     : () {
-          //         // TODO: Implement start server
-          //       },
+          onPressed: isServerRunning
+              ? () async {
+                  await serverService.stop();
+                  ref.invalidate(serverRunningProvider);
+                }
+              : () async {
+                  await serverService.start();
+                  ref.invalidate(serverRunningProvider);
+                },
           icon: Icon(isServerRunning ? Icons.stop : Icons.play_arrow),
           label: Text(isServerRunning ? 'Stop' : 'Start Server'),
           style: FilledButton.styleFrom(
