@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
+import 'package:bonsoir/bonsoir.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -17,10 +16,8 @@ class ClientService extends _$ClientService {
   StreamSubscription? _subscription;
   bool _isConnected = false;
 
-  // Discovery
-  static const _discoveryPort = 12345;
-  static const _multicastAddress = '239.255.255.250';
-  RawDatagramSocket? _discoverySocket;
+  // Bonsoir Discovery
+  BonsoirDiscovery? _discovery;
   StreamController<ServerInfo>? _discoveryController;
   StreamSubscription? _discoverySubscription;
   bool _isDiscovering = false;
@@ -80,23 +77,16 @@ class ClientService extends _$ClientService {
   /// Whether the client is currently connected
   bool get isConnected => _isConnected;
 
-  /// Start discovering servers (UDP multicast)
+  /// Start discovering servers (using Bonsoir)
   Stream<ServerInfo> discover() {
-    /// Stop discovering servers
     void stop() {
       _isDiscovering = false;
       _discoverySubscription?.cancel();
       _discoverySubscription = null;
       _discoveryController?.close();
       _discoveryController = null;
-      if (_discoverySocket != null) {
-        try {
-          final multicastGroup = InternetAddress(_multicastAddress);
-          _discoverySocket!.leaveMulticast(multicastGroup);
-        } catch (_) {}
-        _discoverySocket!.close();
-        _discoverySocket = null;
-      }
+      _discovery?.stop();
+      _discovery = null;
     }
 
     _discoveryController = StreamController<ServerInfo>(
@@ -105,37 +95,21 @@ class ClientService extends _$ClientService {
       },
     );
     _isDiscovering = true;
-    RawDatagramSocket.bind(InternetAddress.anyIPv4, _discoveryPort).then((
-      socket,
-    ) {
-      _discoverySocket = socket;
-      try {
-        final multicastGroup = InternetAddress(_multicastAddress);
-        socket.joinMulticast(multicastGroup);
-      } catch (_) {}
-      _discoverySubscription = socket.listen((event) {
-        if (event == RawSocketEvent.read) {
-          final datagram = socket.receive();
-          if (datagram == null) return;
-          final message = String.fromCharCodes(datagram.data);
-          if (message.startsWith('{')) {
-            try {
-              final json = jsonDecode(message) as Map<String, dynamic>;
-              final type = json['type'] as String?;
-              if (type == 'DESK_SWITCH_SERVER_BROADCAST' ||
-                  type == 'DESK_SWITCH_SERVER_MULTICAST') {
-                final serverJson = json['server'] as Map<String, dynamic>;
-                final serverInfo = ServerInfo.fromJson(serverJson).copyWith(
-                  ipAddress: datagram.address.address,
-                  isOnline: true,
-                  lastSeen: DateTime.now().toIso8601String(),
-                );
-                _discoveryController?.add(serverInfo);
-              }
-            } catch (_) {}
-          }
-        }
-      });
+    _discovery = BonsoirDiscovery(type: '_deskswitch._tcp');
+    _discovery!.ready.then((_) => _discovery!.start());
+    _discoverySubscription = _discovery!.eventStream?.listen((event) {
+      if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
+        final service = event.service;
+        final serverInfo = ServerInfo(
+          id: service?.attributes['id'] ?? service?.name ?? '',
+          name: service?.name ?? '',
+          ipAddress: service?.attributes['ip'] ?? '',
+          port: service?.port ?? 0,
+          isOnline: true,
+          lastSeen: DateTime.now().toIso8601String(),
+        );
+        _discoveryController?.add(serverInfo);
+      }
     });
     return _discoveryController!.stream;
   }

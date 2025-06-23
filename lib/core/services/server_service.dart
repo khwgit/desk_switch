@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
+import 'package:bonsoir/bonsoir.dart';
 import 'package:desk_switch/core/states/app_state.dart';
 import 'package:desk_switch/models/server_config.dart';
 import 'package:desk_switch/models/server_info.dart';
@@ -11,18 +11,14 @@ part 'server_service.g.dart';
 
 @riverpod
 class ServerService extends _$ServerService {
-  // UDP Discovery
-  static const _discoveryPort = 12345;
-  static const _multicastAddress = '239.255.255.250';
-  static const _broadcastAddress = '255.255.255.255';
+  // Bonsoir for service advertisement
+  BonsoirBroadcast? _broadcast;
 
   // WebSocket Server
   HttpServer? _wsServer;
   final List<WebSocket> _clients = [];
   final StreamController<String> _messageController =
       StreamController<String>.broadcast();
-  RawDatagramSocket? _socket;
-  Timer? _signalTimer;
   bool _isRunning = false;
 
   @override
@@ -31,22 +27,28 @@ class ServerService extends _$ServerService {
     return _messageController.stream;
   }
 
-  /// Start UDP broadcast and WebSocket server
+  /// Start Bonsoir advertisement and WebSocket server
   Future<void> start() async {
     if (_isRunning) return;
     final serverInfo = _getCurrentServerInfo();
     if (serverInfo == null) {
       throw Exception('No active server profile/config found');
     }
-    // UDP broadcast
-    _socket = await RawDatagramSocket.bind(
-      InternetAddress.anyIPv4,
-      0,
+    // Bonsoir advertisement
+    final service = BonsoirService(
+      name: serverInfo.name,
+      type: '_deskswitch._udp',
+      port: serverInfo.port,
+      // You can add attributes if needed
+      attributes: {
+        'id': serverInfo.id,
+        'ip': serverInfo.ipAddress,
+      },
     );
-    _socket!.broadcastEnabled = true;
-    _signalTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _sendServerSignal(serverInfo);
-    });
+
+    _broadcast = BonsoirBroadcast(service: service);
+    await _broadcast!.ready;
+    await _broadcast!.start();
     // WebSocket server
     _wsServer = await HttpServer.bind(InternetAddress.anyIPv4, serverInfo.port);
     _wsServer!.listen((HttpRequest request) async {
@@ -73,13 +75,11 @@ class ServerService extends _$ServerService {
     _isRunning = true;
   }
 
-  /// Stop UDP broadcast and WebSocket server
+  /// Stop Bonsoir advertisement and WebSocket server
   Future<void> stop() async {
     if (!_isRunning) return;
-    _signalTimer?.cancel();
-    _signalTimer = null;
-    _socket?.close();
-    _socket = null;
+    await _broadcast?.stop();
+    _broadcast = null;
     await _wsServer?.close(force: true);
     _wsServer = null;
     for (final ws in _clients) {
@@ -92,23 +92,6 @@ class ServerService extends _$ServerService {
 
   /// Whether the service is running
   bool get isRunning => _isRunning;
-
-  /// Send a server signal (multicast and broadcast)
-  void _sendServerSignal(ServerInfo serverInfo, {RawDatagramSocket? socket}) {
-    final s = socket ?? _socket;
-    if (s == null) return;
-    final signalMessage = {
-      'type': 'DESK_SWITCH_SERVER_MULTICAST',
-      'server': serverInfo.toJson(),
-      'timestamp': DateTime.now().toIso8601String(),
-    };
-    final message = jsonEncode(signalMessage);
-    final data = message.codeUnits;
-    // Multicast
-    s.send(data, InternetAddress(_multicastAddress), _discoveryPort);
-    // Broadcast
-    s.send(data, InternetAddress(_broadcastAddress), _discoveryPort);
-  }
 
   /// Get the current server info from app state
   ServerInfo? _getCurrentServerInfo() {
