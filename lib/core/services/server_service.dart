@@ -37,7 +37,7 @@ class ServerService extends _$ServerService {
     // Bonsoir advertisement
     final service = BonsoirService(
       name: serverInfo.name,
-      type: '_deskswitch._udp',
+      type: '_deskswitch._tcp',
       port: serverInfo.port,
       // You can add attributes if needed
       attributes: {

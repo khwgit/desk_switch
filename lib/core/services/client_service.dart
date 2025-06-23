@@ -18,9 +18,10 @@ class ClientService extends _$ClientService {
 
   // Bonsoir Discovery
   BonsoirDiscovery? _discovery;
-  StreamController<ServerInfo>? _discoveryController;
+  StreamController<List<ServerInfo>>? _discoveryController;
   StreamSubscription? _discoverySubscription;
   bool _isDiscovering = false;
+  final Map<String, ServerInfo> _discoveredServers = {};
 
   @override
   Stream<String> build() {
@@ -78,7 +79,13 @@ class ClientService extends _$ClientService {
   bool get isConnected => _isConnected;
 
   /// Start discovering servers (using Bonsoir)
-  Stream<ServerInfo> discover() {
+  Stream<List<ServerInfo>> discover() async* {
+    if (_isDiscovering) {
+      // Already discovering, return the existing stream
+      yield* _discoveryController!.stream;
+      return;
+    }
+
     void stop() {
       _isDiscovering = false;
       _discoverySubscription?.cancel();
@@ -87,31 +94,48 @@ class ClientService extends _$ClientService {
       _discoveryController = null;
       _discovery?.stop();
       _discovery = null;
+      _discoveredServers.clear();
     }
 
-    _discoveryController = StreamController<ServerInfo>(
+    _discoveryController = StreamController<List<ServerInfo>>(
       onCancel: () {
         stop();
       },
     );
     _isDiscovering = true;
-    _discovery = BonsoirDiscovery(type: '_deskswitch._tcp');
-    _discovery!.ready.then((_) => _discovery!.start());
-    _discoverySubscription = _discovery!.eventStream?.listen((event) {
-      if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound) {
+    _discovery = BonsoirDiscovery(
+      type: '_deskswitch._tcp',
+      printLogs: true,
+    );
+    await _discovery!.ready;
+    await _discovery!.start();
+    _discoveryController?.add([]); // Emit empty list when ready
+    final eventStream = _discovery!.eventStream;
+    if (eventStream != null) {
+      _discoverySubscription = eventStream.listen((event) {
         final service = event.service;
-        final serverInfo = ServerInfo(
-          id: service?.attributes['id'] ?? service?.name ?? '',
-          name: service?.name ?? '',
-          ipAddress: service?.attributes['ip'] ?? '',
-          port: service?.port ?? 0,
-          isOnline: true,
-          lastSeen: DateTime.now().toIso8601String(),
-        );
-        _discoveryController?.add(serverInfo);
-      }
-    });
-    return _discoveryController!.stream;
+        if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound &&
+            service != null) {
+          final serverInfo = ServerInfo(
+            id: service.attributes['id'] ?? service.name,
+            name: service.name,
+            ipAddress: service.attributes['ip'] ?? '',
+            port: service.port ?? 0,
+            isOnline: true,
+            lastSeen: DateTime.now().toIso8601String(),
+          );
+          _discoveredServers[serverInfo.id] = serverInfo;
+          _discoveryController?.add(_discoveredServers.values.toList());
+        } else if (event.type ==
+                BonsoirDiscoveryEventType.discoveryServiceLost &&
+            service != null) {
+          final id = service.attributes['id'] ?? service.name;
+          _discoveredServers.remove(id);
+          _discoveryController?.add(_discoveredServers.values.toList());
+        }
+      });
+    }
+    yield* _discoveryController!.stream;
   }
 
   bool get isDiscovering => _isDiscovering;
