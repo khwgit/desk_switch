@@ -22,12 +22,10 @@ class ClientContent extends HookConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Left side - Server Selection
               Expanded(
                 flex: 4,
                 child: Column(
                   children: [
-                    // Connected Server
                     Card(
                       child: _ConnectedServer(
                         isConnected: isConnected,
@@ -49,13 +47,12 @@ class ClientContent extends HookConsumerWidget {
                   ],
                 ),
               ),
-              // Right side - Connection Info
               Expanded(
                 flex: 6,
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: _ConnectionInfo(
+                    child: _ServerInfo(
                       selectedServer: selectedServer,
                       isConnected: isConnected,
                       onConnect: () {
@@ -150,6 +147,7 @@ class _ServerSelection extends HookConsumerWidget {
                             color: theme.colorScheme.onSurface.withAlpha(100),
                           ),
                         ),
+                        const Gap(32),
                       ],
                     ),
                   ),
@@ -299,8 +297,8 @@ class _ServerSelection extends HookConsumerWidget {
   }
 }
 
-class _ConnectionInfo extends StatelessWidget {
-  const _ConnectionInfo({
+class _ServerInfo extends StatelessWidget {
+  const _ServerInfo({
     required this.selectedServer,
     required this.isConnected,
     required this.onConnect,
@@ -323,8 +321,8 @@ class _ConnectionInfo extends StatelessWidget {
           child: ListView(
             children: [
               Text(
-                'Connection Info',
-                style: theme.textTheme.titleLarge,
+                'Server Info',
+                style: theme.textTheme.titleMedium,
               ),
               const Gap(16),
               if (selectedServer != null) ...[
@@ -457,14 +455,6 @@ class _ConnectedServer extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Icon(
-            isConnected ? Icons.link : Icons.link_off,
-            color: isConnected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface.withAlpha(100),
-            size: 24,
-          ),
-          const Gap(12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,13 +464,25 @@ class _ConnectedServer extends StatelessWidget {
                   style: theme.textTheme.titleMedium,
                 ),
                 const Gap(4),
-                Text(
-                  isConnected
-                      ? 'Connected to ${connectedServer?.name ?? "Unknown Server"}'
-                      : 'Not connected',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withAlpha(150),
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      isConnected ? Icons.link : Icons.link_off,
+                      color: isConnected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withAlpha(100),
+                      size: 20,
+                    ),
+                    const Gap(8),
+                    Text(
+                      isConnected
+                          ? 'Connected to ${connectedServer?.name ?? "Unknown Server"}'
+                          : 'Not connected',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(150),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
