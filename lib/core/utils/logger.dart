@@ -1,45 +1,51 @@
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+
+typedef LogFunction =
+    void Function(
+      dynamic message, {
+      Object? error,
+      StackTrace? stackTrace,
+      DateTime? time,
+    });
 
 /// Application-wide logging utility
 class AppLogger {
+  const AppLogger();
+
   static final Logger _logger = Logger(
+    filter: kDebugMode ? DevelopmentFilter() : ProductionFilter(),
     printer: PrettyPrinter(
       methodCount: 2,
       errorMethodCount: 8,
       lineLength: 120,
       colors: true,
       printEmojis: true,
-      printTime: true,
+      noBoxingByDefault: true,
+      dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
     ),
   );
 
-  /// Log a debug message
-  static void d(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.d(message, error: error, stackTrace: stackTrace);
-  }
+  LogFunction get trace => _logger.t;
+  LogFunction get debug => _logger.d;
+  LogFunction get info => _logger.i;
+  LogFunction get warning => _logger.w;
+  LogFunction get error => _logger.e;
+  LogFunction get fatal => _logger.f;
 
-  /// Log an info message
-  static void i(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.i(message, error: error, stackTrace: stackTrace);
-  }
-
-  /// Log a warning message
-  static void w(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.w(message, error: error, stackTrace: stackTrace);
-  }
-
-  /// Log an error message
-  static void e(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.e(message, error: error, stackTrace: stackTrace);
-  }
-
-  /// Log a verbose message
-  static void v(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.v(message, error: error, stackTrace: stackTrace);
-  }
-
-  /// Log a wtf (what a terrible failure) message
-  static void wtf(String message, [dynamic error, StackTrace? stackTrace]) {
-    _logger.wtf(message, error: error, stackTrace: stackTrace);
-  }
+  void Function(
+    Level level,
+    dynamic message, {
+    Object? error,
+    StackTrace? stackTrace,
+    DateTime? time,
+  })
+  get log => _logger.log;
 }
+
+const _logger = AppLogger();
+AppLogger get logger => _logger;
+
+// mixin LoggerMixin {
+//   AppLogger get logger => _logger;
+// }
