@@ -55,7 +55,7 @@ class ServerCard extends StatelessWidget {
         style: theme.textTheme.titleSmall,
       ),
       subtitle: Text(
-        '${server.ipAddress}:${server.port}',
+        '${server.ip}:${server.port}',
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurface.withOpacity(0.6),
         ),

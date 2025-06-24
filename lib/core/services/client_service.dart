@@ -9,7 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'client_service.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ClientService extends _$ClientService {
   // WebSocket connection
   WebSocketChannel? _channel;
@@ -34,7 +34,7 @@ class ClientService extends _$ClientService {
   Future<void> connect(ServerInfo server) async {
     disconnect(); // Clean up any previous connection
 
-    final uri = Uri.parse('ws://${server.ipAddress}:${server.port}');
+    final uri = Uri.parse('ws://${server.ip}:${server.port}');
     _channel = WebSocketChannel.connect(uri);
     _messageController = StreamController<String>();
     _isConnected = true;
@@ -125,8 +125,8 @@ class ClientService extends _$ClientService {
             final serverInfo = ServerInfo(
               id: service.attributes['id'] ?? service.name,
               name: service.name,
-              ipAddress: service.attributes['ip'] ?? '',
-              port: service.port ?? 0,
+              port: service.port,
+              ip: service.attributes['ip'] ?? '',
               isOnline: true,
             );
             _discoveredServers[serverInfo.id] = serverInfo;
@@ -147,7 +147,12 @@ class ClientService extends _$ClientService {
         case BonsoirDiscoveryEventType.discoveryStopped:
           logger.info('🛑 Discovery stopped');
           break;
-        default:
+        case BonsoirDiscoveryEventType.discoveryServiceResolveFailed:
+          logger.info('❌ Resolve failed: ${event.service?.name}');
+          break;
+        case BonsoirDiscoveryEventType.unknown:
+          logger.info('🔍 Unknown event: ${event.type}');
+          break;
       }
     });
 

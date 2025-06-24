@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
-import 'package:desk_switch/core/states/app_state.dart';
-import 'package:desk_switch/models/server_config.dart';
+import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 part 'server_service.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class ServerService extends _$ServerService {
   // Bonsoir for service advertisement
   BonsoirBroadcast? _broadcast;
@@ -30,19 +30,21 @@ class ServerService extends _$ServerService {
   /// Start Bonsoir advertisement and WebSocket server
   Future<void> start() async {
     if (_isRunning) return;
-    final serverInfo = _getCurrentServerInfo();
-    if (serverInfo == null) {
-      throw Exception('No active server profile/config found');
-    }
+    final serverInfo = ServerInfo(
+      id: const Uuid().v4(),
+      name: _getCurrentHostName(),
+      ip: await _getLocalIpAddress(),
+      port: 12345,
+      isOnline: true,
+    );
     // Bonsoir advertisement
     final service = BonsoirService(
       name: serverInfo.name,
       type: '_deskswitch._tcp',
       port: serverInfo.port,
-      // You can add attributes if needed
       attributes: {
         'id': serverInfo.id,
-        'ip': serverInfo.ipAddress,
+        'ip': serverInfo.ip,
       },
     );
 
@@ -93,26 +95,25 @@ class ServerService extends _$ServerService {
   /// Whether the service is running
   bool get isRunning => _isRunning;
 
-  /// Get the current server info from app state
-  ServerInfo? _getCurrentServerInfo() {
-    return const ServerInfo(
-      id: '1',
-      name: 'test',
-      ipAddress: '127.0.0.1',
-      port: 12345,
-      isOnline: true,
+  /// Get the local IP address of the device
+  Future<String> _getLocalIpAddress() async {
+    final interfaces = await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
     );
+    for (final interface in interfaces) {
+      logger.info('🔍 Interface: ${interface.name}');
+      for (final addr in interface.addresses) {
+        if (!addr.isLoopback && !addr.address.startsWith('169.254.')) {
+          return addr.address;
+        }
+      }
+    }
+    return '127.0.0.1';
+  }
 
-    final appState = ref.read(appStateProvider);
-    final profile = appState.serverConfig.profile;
-    if (profile == null) return null;
-    return ServerInfo(
-      id: profile.id,
-      name: profile.displayName,
-      ipAddress: profile.networkInterface ?? '127.0.0.1',
-      port: profile.port,
-      isOnline: true,
-    );
+  /// Get the current desktop/PC name (hostname) in the workgroup
+  String _getCurrentHostName() {
+    return Platform.localHostname;
   }
 
   /// Send a message to all connected clients

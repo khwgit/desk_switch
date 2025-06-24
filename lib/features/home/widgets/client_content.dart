@@ -281,7 +281,7 @@ class _ServerSelection extends HookConsumerWidget {
                 final server = ServerInfo(
                   id: 'manual_${DateTime.now().millisecondsSinceEpoch}',
                   name: name,
-                  ipAddress: ip,
+                  ip: ip,
                   port: port,
                   isOnline: true,
                 );
@@ -334,7 +334,7 @@ class _ServerInfo extends StatelessWidget {
                 const Gap(8),
                 _InfoCard(
                   title: 'IP Address',
-                  value: selectedServer!.ipAddress,
+                  value: selectedServer!.ip,
                   icon: Icons.language,
                 ),
                 const Gap(8),

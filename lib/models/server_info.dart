@@ -8,7 +8,7 @@ abstract class ServerInfo with _$ServerInfo {
   const factory ServerInfo({
     required String id,
     required String name,
-    required String ipAddress,
+    required String ip,
     required int port,
     @Default(false) bool isOnline,
     @Default({}) Map<String, dynamic> metadata,
