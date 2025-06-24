@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bonsoir/bonsoir.dart';
+import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -26,7 +27,7 @@ class ClientService extends _$ClientService {
   @override
   Stream<String> build() {
     // By default, no connection/messages
-    return _messageController?.stream ?? Stream.empty();
+    return _messageController?.stream ?? const Stream.empty();
   }
 
   /// Connect to a server using WebSocket
@@ -82,11 +83,13 @@ class ClientService extends _$ClientService {
   Stream<List<ServerInfo>> discover() async* {
     if (_isDiscovering) {
       // Already discovering, return the existing stream
+      logger.info('🔍 Discovery already running, returning existing stream');
       yield* _discoveryController!.stream;
       return;
     }
 
     void stop() {
+      logger.info('🛑 Stopping discovery');
       _isDiscovering = false;
       _discoverySubscription?.cancel();
       _discoverySubscription = null;
@@ -97,6 +100,7 @@ class ClientService extends _$ClientService {
       _discoveredServers.clear();
     }
 
+    logger.info('🚀 Starting discovery');
     _discoveryController = StreamController<List<ServerInfo>>(
       onCancel: () {
         stop();
@@ -109,6 +113,7 @@ class ClientService extends _$ClientService {
     );
     await _discovery!.ready;
     await _discovery!.start();
+    logger.info('✅ Discovery ready and started');
     _discoveryController?.add([]); // Emit empty list when ready
     final eventStream = _discovery!.eventStream;
     if (eventStream != null) {
@@ -116,6 +121,9 @@ class ClientService extends _$ClientService {
         final service = event.service;
         if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound &&
             service != null) {
+          logger.info(
+            '📡 Found server: ${service.name} (${service.attributes['ip'] ?? 'unknown IP'}:${service.port})',
+          );
           final serverInfo = ServerInfo(
             id: service.attributes['id'] ?? service.name,
             name: service.name,
@@ -129,6 +137,7 @@ class ClientService extends _$ClientService {
         } else if (event.type ==
                 BonsoirDiscoveryEventType.discoveryServiceLost &&
             service != null) {
+          logger.info('❌ Lost server: ${service.name}');
           final id = service.attributes['id'] ?? service.name;
           _discoveredServers.remove(id);
           _discoveryController?.add(_discoveredServers.values.toList());
