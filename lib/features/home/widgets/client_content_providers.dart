@@ -44,8 +44,7 @@ final pinnedServersProvider =
 // Provider for the list of online servers (future: combine with pins)
 @riverpod
 Stream<List<ServerInfo>> servers(Ref ref) {
-  final clientService = ref.read(clientServiceProvider.notifier);
-  final pinnedIds = ref.watch(pinnedServersProvider);
-  // Use the new discoverServers() stream which emits the full list
+  final clientService = ref.watch(clientServiceProvider.notifier);
+  // final pinnedIds = ref.watch(pinnedServersProvider);
   return clientService.discover();
 }

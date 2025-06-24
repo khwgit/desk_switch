@@ -12,40 +12,63 @@ class ClientContent extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedServer = ref.watch(selectedServerProvider);
     // TODO: Replace with a real connection state provider if needed
-    final isClientRunning = false;
+    const isConnected = false;
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Left side - Server Selection
+        // Main Content
         Expanded(
-          flex: 4,
-          child: Card(
-            child: _ServerSelection(
-              selectedServer: selectedServer,
-              onServerSelected: (server) {
-                ref.read(selectedServerProvider.notifier).select(server);
-              },
-            ),
-          ),
-        ),
-        // Right side - Connection Info
-        Expanded(
-          flex: 6,
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _ConnectionInfo(
-                selectedServer: selectedServer,
-                isClientRunning: isClientRunning,
-                onConnect: () {
-                  // TODO: Implement connection logic
-                },
-                onDisconnect: () {
-                  // TODO: Implement disconnect logic
-                },
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left side - Server Selection
+              Expanded(
+                flex: 4,
+                child: Column(
+                  children: [
+                    // Connected Server
+                    Card(
+                      child: _ConnectedServer(
+                        isConnected: isConnected,
+                        connectedServer: isConnected ? selectedServer : null,
+                      ),
+                    ),
+                    Expanded(
+                      child: Card(
+                        child: _ServerSelection(
+                          selectedServer: selectedServer,
+                          onServerSelected: (server) {
+                            ref
+                                .read(selectedServerProvider.notifier)
+                                .select(server);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              // Right side - Connection Info
+              Expanded(
+                flex: 6,
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _ConnectionInfo(
+                      selectedServer: selectedServer,
+                      isConnected: isConnected,
+                      onConnect: () {
+                        // TODO: Implement connection logic
+                      },
+                      onDisconnect: () {
+                        // TODO: Implement disconnect logic
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -71,33 +94,34 @@ class _ServerSelection extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Gap(4),
+        const Gap(4),
         // Header with Add Button
         Row(
           children: [
-            Gap(16),
+            const Gap(16),
             Text(
               'Servers',
               style: theme.textTheme.titleMedium,
             ),
-            Spacer(),
+            const Spacer(),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => ref.invalidate(serversProvider),
-              tooltip: 'Refresh server list (hide offline servers)',
+              tooltip: 'Refresh',
             ),
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: () => _showAddServerDialog(context),
-              tooltip: 'Add server manually',
+              tooltip: 'Add server',
             ),
-            Gap(4),
+            const Gap(4),
           ],
         ),
-        Gap(4),
+        const Gap(4),
         // Available Servers List
         Expanded(
           child: serversStream.when(
+            skipLoadingOnRefresh: false,
             data: (servers) {
               if (servers.isEmpty) {
                 return Center(
@@ -138,7 +162,7 @@ class _ServerSelection extends HookConsumerWidget {
                   final server = servers[index];
                   final isPinned = pinnedNotifier.isPinned(server.id);
                   // TODO: Implement isConnected logic if needed
-                  final isConnected = false;
+                  const isConnected = false;
 
                   return ServerCard(
                     server: server,
@@ -211,7 +235,7 @@ class _ServerSelection extends HookConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Server Manually'),
+        title: const Text('Add Server'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -278,13 +302,13 @@ class _ServerSelection extends HookConsumerWidget {
 class _ConnectionInfo extends StatelessWidget {
   const _ConnectionInfo({
     required this.selectedServer,
-    required this.isClientRunning,
+    required this.isConnected,
     required this.onConnect,
     required this.onDisconnect,
   });
 
   final ServerInfo? selectedServer;
-  final bool isClientRunning;
+  final bool isConnected;
   final VoidCallback onConnect;
   final VoidCallback onDisconnect;
 
@@ -351,11 +375,11 @@ class _ConnectionInfo extends StatelessWidget {
         FilledButton.icon(
           onPressed: selectedServer == null
               ? null
-              : isClientRunning
+              : isConnected
               ? onDisconnect
               : onConnect,
-          icon: Icon(isClientRunning ? Icons.stop : Icons.play_arrow),
-          label: Text(isClientRunning ? 'Disconnect' : 'Connect'),
+          icon: Icon(isConnected ? Icons.stop : Icons.play_arrow),
+          label: Text(isConnected ? 'Disconnect' : 'Connect'),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
@@ -411,6 +435,69 @@ class _InfoCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ConnectedServer extends StatelessWidget {
+  const _ConnectedServer({
+    required this.isConnected,
+    required this.connectedServer,
+  });
+
+  final bool isConnected;
+  final ServerInfo? connectedServer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(
+            isConnected ? Icons.link : Icons.link_off,
+            color: isConnected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withAlpha(100),
+            size: 24,
+          ),
+          const Gap(12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Connection Status',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const Gap(4),
+                Text(
+                  isConnected
+                      ? 'Connected to ${connectedServer?.name ?? "Unknown Server"}'
+                      : 'Not connected',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withAlpha(150),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isConnected && connectedServer != null)
+            FilledButton.icon(
+              onPressed: () {
+                // TODO: Implement disconnect logic
+              },
+              icon: const Icon(Icons.stop),
+              label: const Text('Disconnect'),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.errorContainer,
+                foregroundColor: theme.colorScheme.onErrorContainer,
+              ),
+            ),
+        ],
       ),
     );
   }
