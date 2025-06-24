@@ -107,43 +107,50 @@ class ClientService extends _$ClientService {
       },
     );
     _isDiscovering = true;
-    _discovery = BonsoirDiscovery(
-      type: '_deskswitch._tcp',
-      printLogs: true,
-    );
+    _discovery = BonsoirDiscovery(type: '_deskswitch._tcp');
     await _discovery!.ready;
     await _discovery!.start();
-    logger.info('✅ Discovery ready and started');
     _discoveryController?.add([]); // Emit empty list when ready
-    final eventStream = _discovery!.eventStream;
-    if (eventStream != null) {
-      _discoverySubscription = eventStream.listen((event) {
-        final service = event.service;
-        if (event.type == BonsoirDiscoveryEventType.discoveryServiceFound &&
-            service != null) {
+    _discoverySubscription = _discovery?.eventStream?.listen((event) {
+      final service = event.service;
+      switch (event.type) {
+        case BonsoirDiscoveryEventType.discoveryStarted:
+          logger.info('✅ Discovery ready and started');
+          break;
+        case BonsoirDiscoveryEventType.discoveryServiceFound:
           logger.info(
-            '📡 Found server: ${service.name} (${service.attributes['ip'] ?? 'unknown IP'}:${service.port})',
+            '📡 Found server: ${service?.name} (${service?.attributes['ip'] ?? 'unknown IP'}:${service?.port})',
           );
-          final serverInfo = ServerInfo(
-            id: service.attributes['id'] ?? service.name,
-            name: service.name,
-            ipAddress: service.attributes['ip'] ?? '',
-            port: service.port ?? 0,
-            isOnline: true,
-            lastSeen: DateTime.now().toIso8601String(),
-          );
-          _discoveredServers[serverInfo.id] = serverInfo;
-          _discoveryController?.add(_discoveredServers.values.toList());
-        } else if (event.type ==
-                BonsoirDiscoveryEventType.discoveryServiceLost &&
-            service != null) {
-          logger.info('❌ Lost server: ${service.name}');
-          final id = service.attributes['id'] ?? service.name;
-          _discoveredServers.remove(id);
-          _discoveryController?.add(_discoveredServers.values.toList());
-        }
-      });
-    }
+          if (service != null) {
+            final serverInfo = ServerInfo(
+              id: service.attributes['id'] ?? service.name,
+              name: service.name,
+              ipAddress: service.attributes['ip'] ?? '',
+              port: service.port ?? 0,
+              isOnline: true,
+            );
+            _discoveredServers[serverInfo.id] = serverInfo;
+            _discoveryController?.add(_discoveredServers.values.toList());
+          }
+          break;
+        case BonsoirDiscoveryEventType.discoveryServiceLost:
+          logger.info('❌ Lost server: ${event.service?.name}');
+          if (service != null) {
+            final id = service.attributes['id'] ?? service.name;
+            _discoveredServers.remove(id);
+            _discoveryController?.add(_discoveredServers.values.toList());
+          }
+          break;
+        case BonsoirDiscoveryEventType.discoveryServiceResolved:
+          logger.info('📡 Resolved server: ${event.service?.name}');
+          break;
+        case BonsoirDiscoveryEventType.discoveryStopped:
+          logger.info('🛑 Discovery stopped');
+          break;
+        default:
+      }
+    });
+
     yield* _discoveryController!.stream;
   }
 

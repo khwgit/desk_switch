@@ -11,7 +11,6 @@ abstract class ServerInfo with _$ServerInfo {
     required String ipAddress,
     required int port,
     @Default(false) bool isOnline,
-    String? lastSeen,
     @Default({}) Map<String, dynamic> metadata,
   }) = _ServerInfo;
 

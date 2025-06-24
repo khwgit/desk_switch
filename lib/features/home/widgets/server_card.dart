@@ -1,6 +1,5 @@
 import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 
 class ServerCard extends StatelessWidget {
   const ServerCard({
@@ -31,7 +30,7 @@ class ServerCard extends StatelessWidget {
       leading: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 4, bottom: 4),
+            padding: const EdgeInsets.only(right: 4, bottom: 2),
             child: Icon(
               Icons.computer,
               color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -55,26 +54,11 @@ class ServerCard extends StatelessWidget {
         server.name,
         style: theme.textTheme.titleSmall,
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${server.ipAddress}:${server.port}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          if (server.lastSeen != null) ...[
-            const Gap(2),
-            Text(
-              'Last seen: ${_formatLastSeen(server.lastSeen!)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.4),
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ],
+      subtitle: Text(
+        '${server.ipAddress}:${server.port}',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.6),
+        ),
       ),
       trailing: IconButton(
         icon: Icon(
@@ -100,7 +84,7 @@ class ServerCard extends StatelessWidget {
         width: size,
         height: size,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.blue,
           shape: BoxShape.circle,
         ),
@@ -130,26 +114,6 @@ class ServerCard extends StatelessWidget {
           shape: BoxShape.circle,
         ),
       );
-    }
-  }
-
-  String _formatLastSeen(String lastSeen) {
-    try {
-      final lastSeenTime = DateTime.parse(lastSeen);
-      final now = DateTime.now();
-      final difference = now.difference(lastSeenTime);
-
-      if (difference.inMinutes < 1) {
-        return 'Just now';
-      } else if (difference.inMinutes < 60) {
-        return '${difference.inMinutes}m ago';
-      } else if (difference.inHours < 24) {
-        return '${difference.inHours}h ago';
-      } else {
-        return '${difference.inDays}d ago';
-      }
-    } catch (e) {
-      return 'Unknown';
     }
   }
 }

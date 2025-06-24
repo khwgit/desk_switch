@@ -95,13 +95,12 @@ class ServerService extends _$ServerService {
 
   /// Get the current server info from app state
   ServerInfo? _getCurrentServerInfo() {
-    return ServerInfo(
+    return const ServerInfo(
       id: '1',
       name: 'test',
       ipAddress: '127.0.0.1',
       port: 12345,
       isOnline: true,
-      lastSeen: DateTime.now().toIso8601String(),
     );
 
     final appState = ref.read(appStateProvider);
@@ -113,7 +112,6 @@ class ServerService extends _$ServerService {
       ipAddress: profile.networkInterface ?? '127.0.0.1',
       port: profile.port,
       isOnline: true,
-      lastSeen: DateTime.now().toIso8601String(),
     );
   }
 
