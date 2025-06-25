@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:desk_switch/core/services/client_service.dart';
+import 'package:desk_switch/core/services/discovery_service.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -44,7 +44,7 @@ final pinnedServersProvider =
 // Provider for the list of online servers (future: combine with pins)
 @riverpod
 Stream<List<ServerInfo>> servers(Ref ref) {
-  final clientService = ref.watch(clientServiceProvider.notifier);
+  final discoveryService = ref.watch(discoveryServiceProvider.notifier);
   // final pinnedIds = ref.watch(pinnedServersProvider);
-  return clientService.discover();
+  return discoveryService.discover();
 }

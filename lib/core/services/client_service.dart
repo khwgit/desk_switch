@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:bonsoir/bonsoir.dart';
-import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -9,155 +7,94 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'client_service.g.dart';
 
+enum ClientServiceState {
+  disconnected,
+  connecting,
+  connected,
+}
+
 @Riverpod(keepAlive: true)
 class ClientService extends _$ClientService {
   // WebSocket connection
   WebSocketChannel? _channel;
   StreamController<String>? _messageController;
   StreamSubscription? _subscription;
-  bool _isConnected = false;
-
-  // Bonsoir Discovery
-  BonsoirDiscovery? _discovery;
-  StreamController<List<ServerInfo>>? _discoveryController;
-  StreamSubscription? _discoverySubscription;
-  bool _isDiscovering = false;
-  final Map<String, ServerInfo> _discoveredServers = {};
+  ServerInfo? _connectedServer;
 
   @override
-  Stream<String> build() {
-    // By default, no connection/messages
+  ClientServiceState build() {
+    return ClientServiceState.disconnected;
+  }
+
+  /// Get the message stream
+  Stream<String> messages() {
     return _messageController?.stream ?? const Stream.empty();
   }
+
+  /// Get the currently connected server
+  ServerInfo? get connectedServer => _connectedServer;
 
   /// Connect to a server using WebSocket
   Future<void> connect(ServerInfo server) async {
     disconnect(); // Clean up any previous connection
 
-    final uri = Uri.parse('ws://${server.ip}:${server.port}');
-    _channel = WebSocketChannel.connect(uri);
-    _messageController = StreamController<String>();
-    _isConnected = true;
+    state = ClientServiceState.connecting;
+    _connectedServer = server;
 
-    // Listen to incoming messages
-    _subscription = _channel!.stream.listen(
-      (message) {
-        _messageController?.add(message);
-      },
-      onDone: () {
-        _isConnected = false;
-        _messageController?.close();
-      },
-      onError: (error) {
-        _isConnected = false;
-        _messageController?.addError(error);
-      },
-      cancelOnError: true,
-    );
-    // No need to update state directly; stream will update
+    try {
+      final uri = Uri.parse('ws://${server.ip}:${server.port}');
+      _channel = WebSocketChannel.connect(uri);
+      _messageController = StreamController<String>();
+
+      // Listen to incoming messages
+      _subscription = _channel!.stream.listen(
+        (message) {
+          _messageController?.add(message);
+        },
+        onDone: () {
+          state = ClientServiceState.disconnected;
+          _connectedServer = null;
+          _messageController?.close();
+        },
+        onError: (error) {
+          state = ClientServiceState.disconnected;
+          _connectedServer = null;
+          _messageController?.addError(error);
+        },
+        cancelOnError: true,
+      );
+
+      state = ClientServiceState.connected;
+    } catch (error) {
+      state = ClientServiceState.disconnected;
+      _connectedServer = null;
+      _messageController?.close();
+      rethrow;
+    }
   }
 
   /// Disconnect from the server
   void disconnect() {
-    _isConnected = false;
+    state = ClientServiceState.disconnected;
+    _connectedServer = null;
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close(status.goingAway);
     _channel = null;
     _messageController?.close();
     _messageController = null;
-    // No need to update state directly; stream will update
   }
 
   /// Send a message to the server
   void send(String message) {
-    if (_isConnected && _channel != null) {
+    if (state == ClientServiceState.connected && _channel != null) {
       _channel!.sink.add(message);
     }
   }
 
   /// Whether the client is currently connected
-  bool get isConnected => _isConnected;
+  bool get isConnected => state == ClientServiceState.connected;
 
-  /// Start discovering servers (using Bonsoir)
-  Stream<List<ServerInfo>> discover() async* {
-    if (_isDiscovering) {
-      // Already discovering, return the existing stream
-      logger.info('🔍 Discovery already running, returning existing stream');
-      yield* _discoveryController!.stream;
-      return;
-    }
-
-    void stop() {
-      logger.info('🛑 Stopping discovery');
-      _isDiscovering = false;
-      _discoverySubscription?.cancel();
-      _discoverySubscription = null;
-      _discoveryController?.close();
-      _discoveryController = null;
-      _discovery?.stop();
-      _discovery = null;
-      _discoveredServers.clear();
-    }
-
-    logger.info('🚀 Starting discovery');
-    _discoveryController = StreamController<List<ServerInfo>>(
-      onCancel: () {
-        stop();
-      },
-    );
-    _isDiscovering = true;
-    _discovery = BonsoirDiscovery(type: '_deskswitch._tcp');
-    await _discovery!.ready;
-    await _discovery!.start();
-    _discoveryController?.add([]); // Emit empty list when ready
-    _discoverySubscription = _discovery?.eventStream?.listen((event) {
-      final service = event.service;
-      switch (event.type) {
-        case BonsoirDiscoveryEventType.discoveryStarted:
-          logger.info('✅ Discovery ready and started');
-          break;
-        case BonsoirDiscoveryEventType.discoveryServiceFound:
-          logger.info(
-            '📡 Found server: ${service?.name} (${service?.attributes['ip'] ?? 'unknown IP'}:${service?.port})',
-          );
-          if (service != null) {
-            final serverInfo = ServerInfo(
-              id: service.attributes['id'] ?? service.name,
-              name: service.name,
-              port: service.port,
-              ip: service.attributes['ip'] ?? '',
-              isOnline: true,
-            );
-            _discoveredServers[serverInfo.id] = serverInfo;
-            _discoveryController?.add(_discoveredServers.values.toList());
-          }
-          break;
-        case BonsoirDiscoveryEventType.discoveryServiceLost:
-          logger.info('❌ Lost server: ${event.service?.name}');
-          if (service != null) {
-            final id = service.attributes['id'] ?? service.name;
-            _discoveredServers.remove(id);
-            _discoveryController?.add(_discoveredServers.values.toList());
-          }
-          break;
-        case BonsoirDiscoveryEventType.discoveryServiceResolved:
-          logger.info('📡 Resolved server: ${event.service?.name}');
-          break;
-        case BonsoirDiscoveryEventType.discoveryStopped:
-          logger.info('🛑 Discovery stopped');
-          break;
-        case BonsoirDiscoveryEventType.discoveryServiceResolveFailed:
-          logger.info('❌ Resolve failed: ${event.service?.name}');
-          break;
-        case BonsoirDiscoveryEventType.unknown:
-          logger.info('🔍 Unknown event: ${event.type}');
-          break;
-      }
-    });
-
-    yield* _discoveryController!.stream;
-  }
-
-  bool get isDiscovering => _isDiscovering;
+  /// Whether the client is currently connecting
+  bool get isConnecting => state == ClientServiceState.connecting;
 }
