@@ -41,20 +41,21 @@ class BroadcastService extends _$BroadcastService {
     try {
       _serverInfo = ServerInfo(
         id: const Uuid().v4(),
-        name: _getCurrentHostName(),
+        name: Platform.localHostname,
         ip: await _getLocalIpAddress(),
-        port: 12345,
+        port: await _findAvailablePort(),
         isOnline: true,
       );
 
       // Bonsoir advertisement
       final service = BonsoirService(
-        name: _serverInfo!.name,
         type: '_deskswitch._tcp',
+        name: _serverInfo!.name,
         port: _serverInfo!.port,
         attributes: {
           'id': _serverInfo!.id,
           'ip': _serverInfo!.ip,
+          'port': _serverInfo!.port.toString(),
         },
       );
 
@@ -120,8 +121,11 @@ class BroadcastService extends _$BroadcastService {
     return '127.0.0.1';
   }
 
-  /// Get the current desktop/PC name (hostname) in the workgroup
-  String _getCurrentHostName() {
-    return Platform.localHostname;
+  /// Find an available port by binding to port 0
+  Future<int> _findAvailablePort() async {
+    final socket = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
+    final port = socket.port;
+    await socket.close();
+    return port;
   }
 }

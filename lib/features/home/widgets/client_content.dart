@@ -24,6 +24,17 @@ class ClientContent extends HookConsumerWidget {
             children: [
               Expanded(
                 flex: 4,
+                child: Card(
+                  child: _ServerSelection(
+                    selectedServer: selectedServer,
+                    onServerSelected: (server) {
+                      ref.read(selectedServerProvider.notifier).select(server);
+                    },
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 6,
                 child: Column(
                   children: [
                     Card(
@@ -34,35 +45,22 @@ class ClientContent extends HookConsumerWidget {
                     ),
                     Expanded(
                       child: Card(
-                        child: _ServerSelection(
-                          selectedServer: selectedServer,
-                          onServerSelected: (server) {
-                            ref
-                                .read(selectedServerProvider.notifier)
-                                .select(server);
-                          },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: _ServerInfo(
+                            selectedServer: selectedServer,
+                            isConnected: isConnected,
+                            onConnect: () {
+                              // TODO: Implement connection logic
+                            },
+                            onDisconnect: () {
+                              // TODO: Implement disconnect logic
+                            },
+                          ),
                         ),
                       ),
                     ),
                   ],
-                ),
-              ),
-              Expanded(
-                flex: 6,
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: _ServerInfo(
-                      selectedServer: selectedServer,
-                      isConnected: isConnected,
-                      onConnect: () {
-                        // TODO: Implement connection logic
-                      },
-                      onDisconnect: () {
-                        // TODO: Implement disconnect logic
-                      },
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -317,57 +315,27 @@ class _ServerInfo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          'Server Info',
+          style: theme.textTheme.titleMedium,
+        ),
+        const Gap(16),
         Expanded(
-          child: ListView(
-            children: [
-              Text(
-                'Server Info',
-                style: theme.textTheme.titleMedium,
-              ),
-              const Gap(16),
-              if (selectedServer != null) ...[
-                _InfoCard(
-                  title: 'Server Name',
-                  value: selectedServer!.name,
-                  icon: Icons.computer,
-                ),
-                const Gap(8),
-                _InfoCard(
-                  title: 'IP Address',
-                  value: selectedServer!.ip,
-                  icon: Icons.language,
-                ),
-                const Gap(8),
-                _InfoCard(
-                  title: 'Port',
-                  value: selectedServer!.port.toString(),
-                  icon: Icons.numbers,
-                ),
-                const Gap(8),
-                _InfoCard(
-                  title: 'Status',
-                  value: selectedServer!.isOnline ? 'Online' : 'Offline',
-                  icon: selectedServer!.isOnline
-                      ? Icons.check_circle
-                      : Icons.error_outline,
-                  valueColor: selectedServer!.isOnline
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.error,
-                ),
-              ] else
-                Center(
+          child: selectedServer != null
+              ? ListView(
+                  children: [],
+                )
+              : Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Select a server to view connection info',
+                      'Select a server to view server info',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurface.withAlpha(150),
                       ),
                     ),
                   ),
                 ),
-            ],
-          ),
         ),
         const Gap(16),
         FilledButton.icon(

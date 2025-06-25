@@ -53,59 +53,59 @@ class DiscoveryService extends _$DiscoveryService {
     state = DiscoveryServiceState.discovering;
     _discovery = BonsoirDiscovery(type: '_deskswitch._tcp');
     await _discovery!.ready;
-    _discoveryController?.add([]); // Emit empty list when ready
-    final eventStream = _discovery!.eventStream;
-    if (eventStream != null) {
-      _discoverySubscription = eventStream.listen((event) {
-        final service = event.service;
-        switch (event.type) {
-          case BonsoirDiscoveryEventType.discoveryServiceFound:
-            if (service != null) {
-              logger.info(
-                '📡 Found server: ${service.name} (${service.attributes['ip'] ?? 'unknown IP'}:${service.port})',
-              );
-              final serverInfo = ServerInfo(
-                id: service.attributes['id'] ?? service.name,
-                name: service.name,
-                ip: service.attributes['ip'] ?? '',
-                port: service.port ?? 0,
-                isOnline: true,
-              );
-              _discoveredServers[serverInfo.id] = serverInfo;
-              _discoveryController?.add(_discoveredServers.values.toList());
-            }
-            break;
-          case BonsoirDiscoveryEventType.discoveryServiceLost:
-            if (service != null) {
-              logger.info('❌ Lost server: ${service.name}');
-              final id = service.attributes['id'] ?? service.name;
-              _discoveredServers.remove(id);
-              _discoveryController?.add(_discoveredServers.values.toList());
-            }
-            break;
-          case BonsoirDiscoveryEventType.discoveryServiceResolved:
-            logger.info('🔍 Service resolved: ${service?.name ?? 'unknown'}');
-            break;
-          case BonsoirDiscoveryEventType.discoveryStarted:
-            logger.info('🚀 Discovery started');
-            break;
-          case BonsoirDiscoveryEventType.discoveryStopped:
-            logger.info('🛑 Discovery stopped');
-            break;
-          case BonsoirDiscoveryEventType.discoveryServiceResolveFailed:
-            logger.info(
-              '❌ Service resolve failed: ${service?.name ?? 'unknown'}',
+    _discoverySubscription = _discovery!.eventStream?.listen((event) {
+      final service = event.service;
+      switch (event.type) {
+        case BonsoirDiscoveryEventType.discoveryServiceFound:
+          if (service != null) {
+            // logger.info(
+            //   '📡 Found server: ${service.name} (${service.attributes['ip'] ?? 'unknown IP'}:${service.port})',
+            // );
+            logger.info('📡 Found server: ${service.toJson()}');
+            final serverInfo = ServerInfo(
+              id: service.attributes['id'] ?? service.name,
+              name: service.name,
+              ip: service.attributes['ip'] ?? '',
+              port: service.port,
+              isOnline: true,
             );
-            break;
-          case BonsoirDiscoveryEventType.unknown:
-            logger.info(
-              '❓ Unknown discovery event for service: ${service?.name ?? 'unknown'}',
-            );
-            break;
-        }
-      });
-    }
+            _discoveredServers[serverInfo.id] = serverInfo;
+            _discoveryController?.add(_discoveredServers.values.toList());
+            service.resolve(_discovery!.serviceResolver);
+          }
+          break;
+        case BonsoirDiscoveryEventType.discoveryServiceLost:
+          if (service != null) {
+            logger.info('❌ Lost server: ${service.name}');
+            final id = service.attributes['id'] ?? service.name;
+            _discoveredServers.remove(id);
+            _discoveryController?.add(_discoveredServers.values.toList());
+          }
+          break;
+        case BonsoirDiscoveryEventType.discoveryServiceResolved:
+          logger.info('🔍 Service resolved: ${service?.toJson()}');
+          break;
+        case BonsoirDiscoveryEventType.discoveryStarted:
+          logger.info('🚀 Discovery started');
+          break;
+        case BonsoirDiscoveryEventType.discoveryStopped:
+          logger.info('🛑 Discovery stopped');
+          break;
+        case BonsoirDiscoveryEventType.discoveryServiceResolveFailed:
+          logger.info(
+            '❌ Service resolve failed: ${service?.name ?? 'unknown'}',
+          );
+          break;
+        case BonsoirDiscoveryEventType.unknown:
+          logger.info(
+            '❓ Unknown discovery event for service: ${service?.name ?? 'unknown'}',
+          );
+          break;
+      }
+    });
+
     await _discovery!.start();
+    _discoveryController?.add([]); // Emit empty list when ready
     yield* _discoveryController!.stream;
   }
 
