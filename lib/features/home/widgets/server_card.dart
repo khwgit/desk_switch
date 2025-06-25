@@ -54,11 +54,28 @@ class ServerCard extends StatelessWidget {
         server.name,
         style: theme.textTheme.titleSmall,
       ),
-      subtitle: Text(
-        '${server.ip}:${server.port}',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
-        ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (server.host != null)
+            Text(
+              server.host!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          if (server.port != null)
+            Text(
+              ':${server.port}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+        ],
       ),
       trailing: IconButton(
         icon: Icon(

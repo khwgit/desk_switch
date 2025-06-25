@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:desk_switch/core/services/broadcast_service.dart';
 import 'package:desk_switch/core/utils/logger.dart';
-import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'server_service.g.dart';
@@ -33,12 +32,6 @@ class ServerService extends _$ServerService {
     return _messageController.stream;
   }
 
-  /// Get the current server info from broadcast service
-  ServerInfo? get serverInfo {
-    final broadcastService = ref.read(broadcastServiceProvider.notifier);
-    return broadcastService.serverInfo;
-  }
-
   /// Start WebSocket server and broadcast service
   Future<void> start() async {
     if (state == ServerServiceState.running) {
@@ -61,7 +54,7 @@ class ServerService extends _$ServerService {
       // Start WebSocket server
       _wsServer = await HttpServer.bind(
         InternetAddress.anyIPv4,
-        serverInfo.port,
+        serverInfo.port ?? 0,
       );
       _wsServer!.listen((HttpRequest request) async {
         if (WebSocketTransformer.isUpgradeRequest(request)) {
@@ -96,7 +89,7 @@ class ServerService extends _$ServerService {
       });
 
       state = ServerServiceState.running;
-      logger.info('🖥️ Server started on port ${serverInfo.port}');
+      logger.info('🖥️ Server started on port ${serverInfo.port ?? "-"}');
     } catch (error) {
       logger.error('❌ Failed to start server: $error');
       state = ServerServiceState.stopped;

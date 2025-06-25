@@ -4,6 +4,7 @@ import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 class ClientContent extends HookConsumerWidget {
   const ClientContent({super.key});
@@ -156,7 +157,7 @@ class _ServerSelection extends HookConsumerWidget {
                 itemCount: servers.length,
                 itemBuilder: (context, index) {
                   final server = servers[index];
-                  final isPinned = pinnedNotifier.isPinned(server.id);
+                  final isPinned = pinnedNotifier.isPinned(server.name);
                   // TODO: Implement isConnected logic if needed
                   const isConnected = false;
 
@@ -167,9 +168,9 @@ class _ServerSelection extends HookConsumerWidget {
                     onTap: () => onServerSelected(server),
                     onPinToggle: () {
                       if (isPinned) {
-                        pinnedNotifier.unpin(server.id);
+                        pinnedNotifier.unpin(server.name);
                       } else {
-                        pinnedNotifier.pin(server.id);
+                        pinnedNotifier.pin(server.name);
                       }
                     },
                   );
@@ -277,9 +278,9 @@ class _ServerSelection extends HookConsumerWidget {
 
               if (ip.isNotEmpty) {
                 final server = ServerInfo(
-                  id: 'manual_${DateTime.now().millisecondsSinceEpoch}',
+                  id: const Uuid().v4(),
                   name: name,
-                  ip: ip,
+                  host: ip,
                   port: port,
                   isOnline: true,
                 );
@@ -444,7 +445,7 @@ class _ConnectedServer extends StatelessWidget {
                     const Gap(8),
                     Text(
                       isConnected
-                          ? 'Connected to ${connectedServer?.name ?? "Unknown Server"}'
+                          ? 'Connected to ${connectedServer?.name ?? "Unknown Server"} (${connectedServer?.host ?? "-"}:${connectedServer?.port?.toString() ?? "-"})'
                           : 'Not connected',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface.withAlpha(150),

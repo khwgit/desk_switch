@@ -42,20 +42,17 @@ class BroadcastService extends _$BroadcastService {
       _serverInfo = ServerInfo(
         id: const Uuid().v4(),
         name: Platform.localHostname,
-        ip: await _getLocalIpAddress(),
-        port: await _findAvailablePort(),
         isOnline: true,
       );
 
       // Bonsoir advertisement
       final service = BonsoirService(
-        type: '_deskswitch._tcp',
         name: _serverInfo!.name,
-        port: _serverInfo!.port,
+        type: '_deskswitch._tcp',
+        port: await _findAvailablePort(),
         attributes: {
-          'id': _serverInfo!.id,
-          'ip': _serverInfo!.ip,
-          'port': _serverInfo!.port.toString(),
+          'host': _serverInfo!.host ?? '',
+          'port': _serverInfo!.port?.toString() ?? '',
         },
       );
 
@@ -65,7 +62,7 @@ class BroadcastService extends _$BroadcastService {
 
       state = BroadcastServiceState.broadcasting;
       logger.info(
-        '📡 Started broadcasting: ${_serverInfo!.name} (${_serverInfo!.ip}:${_serverInfo!.port})',
+        '📡 Started broadcasting: ${_serverInfo!.name} (${_serverInfo!.host ?? "-"}:${_serverInfo!.port?.toString() ?? "-"})',
       );
     } catch (error) {
       logger.error('❌ Failed to start broadcast: $error');
@@ -105,21 +102,21 @@ class BroadcastService extends _$BroadcastService {
   /// Whether the service is stopping
   bool get isStopping => state == BroadcastServiceState.stopping;
 
-  /// Get the local IP address of the device
-  Future<String> _getLocalIpAddress() async {
-    final interfaces = await NetworkInterface.list(
-      type: InternetAddressType.IPv4,
-    );
-    for (final interface in interfaces) {
-      logger.info('🔍 Interface: ${interface.name}');
-      for (final addr in interface.addresses) {
-        if (!addr.isLoopback && !addr.address.startsWith('169.254.')) {
-          return addr.address;
-        }
-      }
-    }
-    return '127.0.0.1';
-  }
+  // /// Get the local IP address of the device
+  // Future<String> _getLocalIpAddress() async {
+  //   final interfaces = await NetworkInterface.list(
+  //     type: InternetAddressType.IPv4,
+  //   );
+  //   for (final interface in interfaces) {
+  //     logger.info('🔍 Interface: ${interface.name}');
+  //     for (final addr in interface.addresses) {
+  //       if (!addr.isLoopback && !addr.address.startsWith('169.254.')) {
+  //         return addr.address;
+  //       }
+  //     }
+  //   }
+  //   return '127.0.0.1';
+  // }
 
   /// Find an available port by binding to port 0
   Future<int> _findAvailablePort() async {

@@ -42,7 +42,9 @@ class ClientService extends _$ClientService {
     _connectedServer = server;
 
     try {
-      final uri = Uri.parse('ws://${server.ip}:${server.port}');
+      final uri = Uri.parse(
+        'ws://${server.host ?? "localhost"}:${server.port ?? 80}',
+      );
       _channel = WebSocketChannel.connect(uri);
       _messageController = StreamController<String>();
 

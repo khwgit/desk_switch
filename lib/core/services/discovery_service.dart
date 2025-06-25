@@ -62,14 +62,16 @@ class DiscoveryService extends _$DiscoveryService {
             //   '📡 Found server: ${service.name} (${service.attributes['ip'] ?? 'unknown IP'}:${service.port})',
             // );
             logger.info('📡 Found server: ${service.toJson()}');
+            // Use id if available, otherwise fallback to name
+            final id = service.attributes['id'] ?? service.name;
             final serverInfo = ServerInfo(
-              id: service.attributes['id'] ?? service.name,
+              id: id,
               name: service.name,
-              ip: service.attributes['ip'] ?? '',
-              port: service.port,
+              host: service.attributes['host'] ?? '',
+              port: service.port == 0 ? null : service.port,
               isOnline: true,
             );
-            _discoveredServers[serverInfo.id] = serverInfo;
+            _discoveredServers[id] = serverInfo;
             _discoveryController?.add(_discoveredServers.values.toList());
             service.resolve(_discovery!.serviceResolver);
           }
@@ -77,13 +79,25 @@ class DiscoveryService extends _$DiscoveryService {
         case BonsoirDiscoveryEventType.discoveryServiceLost:
           if (service != null) {
             logger.info('❌ Lost server: ${service.name}');
-            final id = service.attributes['id'] ?? service.name;
-            _discoveredServers.remove(id);
+            _discoveredServers.remove(service.name);
             _discoveryController?.add(_discoveredServers.values.toList());
           }
           break;
         case BonsoirDiscoveryEventType.discoveryServiceResolved:
           logger.info('🔍 Service resolved: ${service?.toJson()}');
+          if (service is ResolvedBonsoirService) {
+            // Use id if available, otherwise fallback to name
+            final id = service.attributes['id'] ?? service.name;
+            final updatedServer = ServerInfo(
+              id: id,
+              name: service.name,
+              host: service.host,
+              port: service.port == 0 ? null : service.port,
+              isOnline: true,
+            );
+            _discoveredServers[id] = updatedServer;
+            _discoveryController?.add(_discoveredServers.values.toList());
+          }
           break;
         case BonsoirDiscoveryEventType.discoveryStarted:
           logger.info('🚀 Discovery started');
