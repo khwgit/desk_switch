@@ -55,6 +55,7 @@ class DiscoveryService extends _$DiscoveryService {
     await _discovery!.ready;
     _discoverySubscription = _discovery!.eventStream?.listen((event) {
       final service = event.service;
+      final id = service?.attributes['id'] ?? service?.name ?? '';
       switch (event.type) {
         case BonsoirDiscoveryEventType.discoveryServiceFound:
           if (service != null) {
@@ -62,7 +63,6 @@ class DiscoveryService extends _$DiscoveryService {
               '📡 Found server: ${service.name}[${service.attributes['id']}]',
             );
             // Use id if available, otherwise fallback to name
-            final id = service.attributes['id'] ?? service.name;
             final serverInfo = ServerInfo(
               id: id,
               name: service.name,
@@ -77,7 +77,7 @@ class DiscoveryService extends _$DiscoveryService {
         case BonsoirDiscoveryEventType.discoveryServiceLost:
           if (service != null) {
             logger.info('❌ Lost server: ${service.name}');
-            _discoveredServers.remove(service.name);
+            _discoveredServers.remove(id);
             _discoveryController?.add(_discoveredServers.values.toList());
           }
           break;
@@ -91,7 +91,7 @@ class DiscoveryService extends _$DiscoveryService {
             final updatedServer = ServerInfo(
               id: id,
               name: service.name,
-              host: service.attributes['ws_host'],
+              host: service.host,
               port: int.tryParse(service.attributes['ws_port'] ?? '0'),
               isOnline: true,
             );

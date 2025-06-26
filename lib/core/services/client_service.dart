@@ -43,9 +43,7 @@ class ClientService extends _$ClientService {
     _connectedServer = server;
 
     try {
-      final uri = Uri.parse(
-        'ws://${server.host ?? "localhost"}:${12345}',
-      );
+      final uri = Uri.parse('ws://${server.host}:${server.port}');
 
       logger.info(
         '🔌 Connecting to server: ${server.name} at ${uri.host}:${uri.port}',
