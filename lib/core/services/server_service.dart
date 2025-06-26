@@ -54,10 +54,18 @@ class ServerService extends _$ServerService {
         if (WebSocketTransformer.isUpgradeRequest(request)) {
           final ws = await WebSocketTransformer.upgrade(request);
           _clients.add(ws);
-          logger.info('🔌 Client connected: ${_clients.length} total');
+
+          // Log client connection with details
+          final clientAddress =
+              request.connectionInfo?.remoteAddress.address ?? 'unknown';
+          final clientPort = request.connectionInfo?.remotePort ?? 0;
+          logger.info(
+            '🔌 Client connected: $clientAddress:$clientPort (${_clients.length} total)',
+          );
 
           ws.listen(
             (data) {
+              logger.info(data);
               if (data is String) {
                 _messageController.add(data);
               }
@@ -66,11 +74,13 @@ class ServerService extends _$ServerService {
             onDone: () {
               _clients.remove(ws);
               logger.info(
-                '🔌 Client disconnected: ${_clients.length} remaining',
+                '🔌 Client disconnected: $clientAddress:$clientPort (${_clients.length} remaining)',
               );
             },
             onError: (error) {
-              logger.error('❌ WebSocket error: $error');
+              logger.error(
+                '❌ WebSocket error from $clientAddress:$clientPort: $error',
+              );
               _clients.remove(ws);
             },
             cancelOnError: true,

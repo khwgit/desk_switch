@@ -91,8 +91,8 @@ class DiscoveryService extends _$DiscoveryService {
             final updatedServer = ServerInfo(
               id: id,
               name: service.name,
-              host: service.host,
-              port: service.port,
+              host: service.attributes['ws_host'],
+              port: int.tryParse(service.attributes['ws_port'] ?? '0'),
               isOnline: true,
             );
             _discoveredServers[id] = updatedServer;

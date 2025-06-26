@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -45,20 +46,28 @@ class ClientService extends _$ClientService {
       final uri = Uri.parse(
         'ws://${server.host ?? "localhost"}:${12345}',
       );
+
+      logger.info(
+        '🔌 Connecting to server: ${server.name} at ${uri.host}:${uri.port}',
+      );
+
       _channel = WebSocketChannel.connect(uri);
       _messageController = StreamController<String>();
 
       // Listen to incoming messages
       _subscription = _channel!.stream.listen(
         (message) {
+          logger.info(message);
           _messageController?.add(message);
         },
         onDone: () {
+          logger.info('🔌 Disconnected from server: ${server.name}');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
           _messageController?.close();
         },
         onError: (error) {
+          logger.error('❌ Connection error to ${server.name}: $error');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
           _messageController?.addError(error);
@@ -67,7 +76,9 @@ class ClientService extends _$ClientService {
       );
 
       state = ClientServiceState.connected;
+      logger.info('✅ Successfully connected to server: ${server.name}');
     } catch (error) {
+      logger.error('❌ Failed to connect to server ${server.name}: $error');
       state = ClientServiceState.disconnected;
       _connectedServer = null;
       _messageController?.close();
@@ -77,6 +88,10 @@ class ClientService extends _$ClientService {
 
   /// Disconnect from the server
   void disconnect() {
+    if (_connectedServer != null) {
+      logger.info('🔌 Disconnecting from server: ${_connectedServer!.name}');
+    }
+
     state = ClientServiceState.disconnected;
     _connectedServer = null;
     _subscription?.cancel();
