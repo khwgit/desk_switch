@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
 import 'package:desk_switch/core/utils/logger.dart';
+import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:uuid/uuid.dart';
 
 part 'broadcast_service.g.dart';
 
@@ -25,7 +25,7 @@ class BroadcastService extends _$BroadcastService {
   }
 
   /// Start Bonsoir advertisement
-  Future<void> start() async {
+  Future<void> start(ServerInfo info) async {
     if (state == BroadcastServiceState.broadcasting) {
       logger.info('📡 Broadcast already running');
       return;
@@ -36,11 +36,14 @@ class BroadcastService extends _$BroadcastService {
     try {
       // Bonsoir advertisement
       final service = BonsoirService(
-        name: Platform.localHostname,
+        name: info.name,
         type: '_deskswitch._tcp',
-        port: await _findAvailablePort(), // TODO: get port from config
+        // TODO: get discovery port from config
+        port: await _findAvailablePort(),
         attributes: {
-          'id': const Uuid().v4(),
+          'id': info.id,
+          'ws_port': info.port.toString(),
+          'ws_host': info.host ?? '',
         },
       );
 

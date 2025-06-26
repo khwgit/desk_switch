@@ -7,6 +7,7 @@ class ServerCard extends StatelessWidget {
     required this.server,
     required this.isPinned,
     required this.isConnected,
+    required this.isConnecting,
     required this.onTap,
     required this.onPinToggle,
   });
@@ -16,6 +17,7 @@ class ServerCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onPinToggle;
   final bool isConnected;
+  final bool isConnecting;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +97,19 @@ class ServerCard extends StatelessWidget {
   Widget _buildStatusIndicator(ThemeData theme) {
     const size = 10.0;
 
-    if (isConnected) {
+    if (isConnecting) {
+      // Show loading animation for connecting state
+      return SizedBox(
+        width: size,
+        height: size,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.5,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            theme.colorScheme.primary,
+          ),
+        ),
+      );
+    } else if (isConnected) {
       // Show blue connected icon
       return Container(
         width: size,

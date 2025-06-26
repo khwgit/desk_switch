@@ -11,6 +11,7 @@ class ServerContent extends HookConsumerWidget {
     final theme = Theme.of(context);
     final isServerRunning = ref.watch(serverRunningProvider);
     final serverService = ref.read(serverServiceProvider.notifier);
+    final broadcastService = ref.read(broadcastServiceProvider.notifier);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -50,10 +51,14 @@ class ServerContent extends HookConsumerWidget {
           onPressed: isServerRunning
               ? () async {
                   await serverService.stop();
+                  await broadcastService.stop();
                   ref.invalidate(serverRunningProvider);
                 }
               : () async {
-                  await serverService.start();
+                  final serverInfo = await serverService.start();
+                  if (serverInfo != null) {
+                    await broadcastService.start(serverInfo);
+                  }
                   ref.invalidate(serverRunningProvider);
                 },
           icon: Icon(isServerRunning ? Icons.stop : Icons.play_arrow),

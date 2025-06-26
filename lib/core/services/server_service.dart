@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:desk_switch/core/services/broadcast_service.dart';
 import 'package:desk_switch/core/utils/logger.dart';
+import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 part 'server_service.g.dart';
 
@@ -18,6 +20,7 @@ enum ServerServiceState {
 class ServerService extends _$ServerService {
   // WebSocket Server
   HttpServer? _wsServer;
+  ServerInfo? _serverInfo;
   final List<WebSocket> _clients = [];
   final StreamController<String> _messageController =
       StreamController<String>.broadcast();
@@ -33,28 +36,19 @@ class ServerService extends _$ServerService {
   }
 
   /// Start WebSocket server and broadcast service
-  Future<void> start() async {
+  Future<ServerInfo?> start() async {
     if (state == ServerServiceState.running) {
       logger.info('🖥️ Server already running');
-      return;
+      return _serverInfo;
     }
 
     state = ServerServiceState.starting;
 
     try {
-      // Start broadcast service first
-      final broadcastService = ref.read(broadcastServiceProvider.notifier);
-      await broadcastService.start();
-
-      final serverInfo = broadcastService.serverInfo;
-      if (serverInfo == null) {
-        throw Exception('Failed to get server info from broadcast service');
-      }
-
       // Start WebSocket server
       _wsServer = await HttpServer.bind(
         InternetAddress.anyIPv4,
-        serverInfo.port ?? 0,
+        0, // TODO: get port from config
       );
       _wsServer!.listen((HttpRequest request) async {
         if (WebSocketTransformer.isUpgradeRequest(request)) {
@@ -88,13 +82,23 @@ class ServerService extends _$ServerService {
         }
       });
 
+      _serverInfo = ServerInfo(
+        id: const Uuid().v4(),
+        name: Platform.localHostname,
+        port: _wsServer!.port,
+        host: _wsServer!.address.address,
+      );
       state = ServerServiceState.running;
-      logger.info('🖥️ Server started on port ${serverInfo.port ?? "-"}');
+      logger.info(
+        '🖥️ Server started: ${_serverInfo?.name} (${_serverInfo?.host}:${_serverInfo?.port})',
+      );
     } catch (error) {
       logger.error('❌ Failed to start server: $error');
       state = ServerServiceState.stopped;
       rethrow;
     }
+
+    return _serverInfo;
   }
 
   /// Stop WebSocket server and broadcast service
@@ -113,6 +117,7 @@ class ServerService extends _$ServerService {
       // Stop WebSocket server
       await _wsServer?.close(force: true);
       _wsServer = null;
+      _serverInfo = null;
 
       // Close all client connections
       for (final ws in _clients) {
@@ -128,15 +133,6 @@ class ServerService extends _$ServerService {
       rethrow;
     }
   }
-
-  /// Whether the service is currently running
-  bool get isRunning => state == ServerServiceState.running;
-
-  /// Whether the service is starting up
-  bool get isStarting => state == ServerServiceState.starting;
-
-  /// Whether the service is stopping
-  bool get isStopping => state == ServerServiceState.stopping;
 
   /// Send a message to all connected clients
   void send(String message) {
