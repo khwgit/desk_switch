@@ -2,14 +2,13 @@ import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
 import 'package:desk_switch/core/utils/logger.dart';
-import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 part 'broadcast_service.g.dart';
 
 enum BroadcastServiceState {
-  stopped,
+  idle,
   starting,
   broadcasting,
   stopping,
@@ -19,15 +18,11 @@ enum BroadcastServiceState {
 class BroadcastService extends _$BroadcastService {
   // Bonsoir for service advertisement
   BonsoirBroadcast? _broadcast;
-  ServerInfo? _serverInfo;
 
   @override
   BroadcastServiceState build() {
-    return BroadcastServiceState.stopped;
+    return BroadcastServiceState.idle;
   }
-
-  /// Get the current server info being broadcast
-  ServerInfo? get serverInfo => _serverInfo;
 
   /// Start Bonsoir advertisement
   Future<void> start() async {
@@ -39,20 +34,13 @@ class BroadcastService extends _$BroadcastService {
     state = BroadcastServiceState.starting;
 
     try {
-      _serverInfo = ServerInfo(
-        id: const Uuid().v4(),
-        name: Platform.localHostname,
-        isOnline: true,
-      );
-
       // Bonsoir advertisement
       final service = BonsoirService(
-        name: _serverInfo!.name,
+        name: Platform.localHostname,
         type: '_deskswitch._tcp',
-        port: await _findAvailablePort(),
+        port: await _findAvailablePort(), // TODO: get port from config
         attributes: {
-          'host': _serverInfo!.host ?? '',
-          'port': _serverInfo!.port?.toString() ?? '',
+          'id': const Uuid().v4(),
         },
       );
 
@@ -61,20 +49,17 @@ class BroadcastService extends _$BroadcastService {
       await _broadcast!.start();
 
       state = BroadcastServiceState.broadcasting;
-      logger.info(
-        '📡 Started broadcasting: ${_serverInfo!.name} (${_serverInfo!.host ?? "-"}:${_serverInfo!.port?.toString() ?? "-"})',
-      );
+      logger.info('📡 Started broadcasting: ${service.name}:${service.port}');
     } catch (error) {
       logger.error('❌ Failed to start broadcast: $error');
-      state = BroadcastServiceState.stopped;
-      _serverInfo = null;
+      state = BroadcastServiceState.idle;
       rethrow;
     }
   }
 
   /// Stop Bonsoir advertisement
   Future<void> stop() async {
-    if (state == BroadcastServiceState.stopped) {
+    if (state == BroadcastServiceState.idle) {
       return;
     }
 
@@ -83,40 +68,14 @@ class BroadcastService extends _$BroadcastService {
     try {
       await _broadcast?.stop();
       _broadcast = null;
-      _serverInfo = null;
-      state = BroadcastServiceState.stopped;
+      state = BroadcastServiceState.idle;
       logger.info('🛑 Stopped broadcasting');
     } catch (error) {
       logger.error('❌ Error stopping broadcast: $error');
-      state = BroadcastServiceState.stopped;
+      state = BroadcastServiceState.idle;
       rethrow;
     }
   }
-
-  /// Whether the service is currently broadcasting
-  bool get isBroadcasting => state == BroadcastServiceState.broadcasting;
-
-  /// Whether the service is starting up
-  bool get isStarting => state == BroadcastServiceState.starting;
-
-  /// Whether the service is stopping
-  bool get isStopping => state == BroadcastServiceState.stopping;
-
-  // /// Get the local IP address of the device
-  // Future<String> _getLocalIpAddress() async {
-  //   final interfaces = await NetworkInterface.list(
-  //     type: InternetAddressType.IPv4,
-  //   );
-  //   for (final interface in interfaces) {
-  //     logger.info('🔍 Interface: ${interface.name}');
-  //     for (final addr in interface.addresses) {
-  //       if (!addr.isLoopback && !addr.address.startsWith('169.254.')) {
-  //         return addr.address;
-  //       }
-  //     }
-  //   }
-  //   return '127.0.0.1';
-  // }
 
   /// Find an available port by binding to port 0
   Future<int> _findAvailablePort() async {

@@ -8,7 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'discovery_service.g.dart';
 
 enum DiscoveryServiceState {
-  stopped,
+  idle,
   discovering,
 }
 
@@ -21,7 +21,7 @@ class DiscoveryService extends _$DiscoveryService {
 
   @override
   DiscoveryServiceState build() {
-    return DiscoveryServiceState.stopped;
+    return DiscoveryServiceState.idle;
   }
 
   /// Get the discovered servers stream
@@ -34,7 +34,7 @@ class DiscoveryService extends _$DiscoveryService {
 
     void stop() {
       logger.info('🛑 Stopping discovery');
-      state = DiscoveryServiceState.stopped;
+      state = DiscoveryServiceState.idle;
       _discoverySubscription?.cancel();
       _discoverySubscription = null;
       _discoveryController?.close();
@@ -58,21 +58,19 @@ class DiscoveryService extends _$DiscoveryService {
       switch (event.type) {
         case BonsoirDiscoveryEventType.discoveryServiceFound:
           if (service != null) {
-            // logger.info(
-            //   '📡 Found server: ${service.name} (${service.attributes['ip'] ?? 'unknown IP'}:${service.port})',
-            // );
-            logger.info('📡 Found server: ${service.toJson()}');
+            logger.info(
+              '📡 Found server: ${service.name}[${service.attributes['id']}]',
+            );
             // Use id if available, otherwise fallback to name
             final id = service.attributes['id'] ?? service.name;
             final serverInfo = ServerInfo(
               id: id,
               name: service.name,
-              host: service.attributes['host'] ?? '',
-              port: service.port == 0 ? null : service.port,
               isOnline: true,
             );
             _discoveredServers[id] = serverInfo;
             _discoveryController?.add(_discoveredServers.values.toList());
+            // TODO: only resolve when connected?
             service.resolve(_discovery!.serviceResolver);
           }
           break;
@@ -84,15 +82,17 @@ class DiscoveryService extends _$DiscoveryService {
           }
           break;
         case BonsoirDiscoveryEventType.discoveryServiceResolved:
-          logger.info('🔍 Service resolved: ${service?.toJson()}');
           if (service is ResolvedBonsoirService) {
+            logger.info(
+              '🔍 Service resolved: ${service.name}[${service.attributes['id']}] (${service.host}:${service.port})',
+            );
             // Use id if available, otherwise fallback to name
             final id = service.attributes['id'] ?? service.name;
             final updatedServer = ServerInfo(
               id: id,
               name: service.name,
               host: service.host,
-              port: service.port == 0 ? null : service.port,
+              port: service.port,
               isOnline: true,
             );
             _discoveredServers[id] = updatedServer;
@@ -133,10 +133,7 @@ class DiscoveryService extends _$DiscoveryService {
       _discovery?.stop();
       _discovery = null;
       _discoveredServers.clear();
-      state = DiscoveryServiceState.stopped;
+      state = DiscoveryServiceState.idle;
     }
   }
-
-  /// Whether discovery is currently running
-  bool get isDiscovering => state == DiscoveryServiceState.discovering;
 }
