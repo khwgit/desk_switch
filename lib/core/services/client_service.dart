@@ -1,10 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:web_socket_channel/status.dart' as status;
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'client_service.g.dart';
 
@@ -17,7 +16,7 @@ enum ClientServiceState {
 @Riverpod(keepAlive: true)
 class ClientService extends _$ClientService {
   // WebSocket connection
-  WebSocketChannel? _channel;
+  WebSocket? _socket;
   StreamController<String>? _messageController;
   StreamSubscription? _subscription;
   ServerInfo? _connectedServer;
@@ -46,26 +45,28 @@ class ClientService extends _$ClientService {
       final uri = Uri.parse('ws://${server.host}:${server.port}');
 
       logger.info(
-        '🔌 Connecting to server: ${server.name} at ${uri.host}:${uri.port}',
+        '🔌 Connecting to server: ${server.name} at \\${uri.host}:\\${uri.port}',
       );
 
-      _channel = WebSocketChannel.connect(uri);
+      _socket = await WebSocket.connect(uri.toString());
       _messageController = StreamController<String>();
 
       // Listen to incoming messages
-      _subscription = _channel!.stream.listen(
+      _subscription = _socket!.listen(
         (message) {
           logger.info(message);
-          _messageController?.add(message);
+          if (message is String) {
+            _messageController?.add(message);
+          }
         },
         onDone: () {
-          logger.info('🔌 Disconnected from server: ${server.name}');
+          logger.info('🔌 Disconnected from server: \\${server.name}');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
           _messageController?.close();
         },
         onError: (error) {
-          logger.error('❌ Connection error to ${server.name}: $error');
+          logger.error('❌ Connection error to \\${server.name}: $error');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
           _messageController?.addError(error);
@@ -74,9 +75,9 @@ class ClientService extends _$ClientService {
       );
 
       state = ClientServiceState.connected;
-      logger.info('✅ Successfully connected to server: ${server.name}');
+      logger.info('✅ Successfully connected to server: \\${server.name}');
     } catch (error) {
-      logger.error('❌ Failed to connect to server ${server.name}: $error');
+      logger.error('❌ Failed to connect to server \\${server.name}: $error');
       state = ClientServiceState.disconnected;
       _connectedServer = null;
       _messageController?.close();
@@ -87,23 +88,23 @@ class ClientService extends _$ClientService {
   /// Disconnect from the server
   void disconnect() {
     if (_connectedServer != null) {
-      logger.info('🔌 Disconnecting from server: ${_connectedServer!.name}');
+      logger.info('🔌 Disconnecting from server: \\${_connectedServer!.name}');
     }
 
     state = ClientServiceState.disconnected;
     _connectedServer = null;
     _subscription?.cancel();
     _subscription = null;
-    _channel?.sink.close(status.goingAway);
-    _channel = null;
+    _socket?.close(WebSocketStatus.goingAway);
+    _socket = null;
     _messageController?.close();
     _messageController = null;
   }
 
   /// Send a message to the server
   void send(String message) {
-    if (state == ClientServiceState.connected && _channel != null) {
-      _channel!.sink.add(message);
+    if (state == ClientServiceState.connected && _socket != null) {
+      _socket!.add(message);
     }
   }
 
