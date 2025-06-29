@@ -14,16 +14,17 @@ class AppTheme {
       useMaterial3: true,
       cardTheme: const CardThemeData(
         elevation: 0,
+        margin: EdgeInsets.zero,
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: const OutlineInputBorder(),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
         filled: true,
-        contentPadding: const EdgeInsets.symmetric(
+        contentPadding: EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
       ),
-      navigationRailTheme: NavigationRailThemeData(
+      navigationRailTheme: const NavigationRailThemeData(
         minWidth: 72,
         minExtendedWidth: 196,
       ),
