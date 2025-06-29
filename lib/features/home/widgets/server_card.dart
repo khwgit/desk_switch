@@ -129,6 +129,7 @@ class ServerCard extends StatelessWidget {
             ),
           ),
         );
+      case ClientServiceState.disconnecting:
       case ClientServiceState.disconnected:
         if (server.isOnline) {
           // Show green dot for online

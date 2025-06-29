@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'client_service.g.dart';
 
 enum ClientServiceState {
+  disconnecting,
   disconnected,
   connecting,
   connected,
@@ -87,11 +88,21 @@ class ClientService extends _$ClientService {
 
   /// Disconnect from the server
   Future<void> disconnect() async {
+    if (state == ClientServiceState.disconnecting) {
+      logger.info('🔌 Already disconnecting, returning');
+      return;
+    }
+
+    if (state == ClientServiceState.disconnected) {
+      logger.info('🔌 Already disconnected, returning');
+      return;
+    }
+
     if (_connectedServer != null) {
       logger.info('🔌 Disconnecting from server: \\${_connectedServer!.name}');
     }
 
-    state = ClientServiceState.disconnected;
+    state = ClientServiceState.disconnecting;
     _connectedServer = null;
     await _subscription?.cancel();
     _subscription = null;
@@ -99,6 +110,7 @@ class ClientService extends _$ClientService {
     _socket = null;
     await _messageController?.close();
     _messageController = null;
+    state = ClientServiceState.disconnected;
   }
 
   /// Send a message to the server

@@ -10,6 +10,7 @@ part 'discovery_service.g.dart';
 enum DiscoveryServiceState {
   idle,
   discovering,
+  stopping,
 }
 
 @Riverpod(keepAlive: true)
@@ -111,7 +112,13 @@ class DiscoveryService extends _$DiscoveryService {
 
   /// Stop discovery
   Future<void> stop() async {
+    if (state == DiscoveryServiceState.stopping) {
+      logger.info('🛑 Discovery already stopping, returning');
+      return;
+    }
+
     logger.info('🛑 Stopping discovery');
+    state = DiscoveryServiceState.stopping;
     await _discoverySubscription?.cancel();
     _discoverySubscription = null;
     await _discoveryController?.close();

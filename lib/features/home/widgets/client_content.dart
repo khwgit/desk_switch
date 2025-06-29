@@ -1,4 +1,5 @@
 import 'package:desk_switch/core/services/client_service.dart';
+import 'package:desk_switch/core/services/discovery_service.dart';
 import 'package:desk_switch/features/home/widgets/client_content_providers.dart';
 import 'package:desk_switch/features/home/widgets/server_card.dart';
 import 'package:desk_switch/features/home/widgets/server_content_providers.dart';
@@ -26,11 +27,9 @@ class ClientContent extends HookConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Expanded(child: _ServerSettings()),
+              Gap(8),
               _ConnectionStatus(),
-              Gap(8),
-              Expanded(child: _ServerInfo()),
-              Gap(8),
-              _ConnectButton(),
             ],
           ),
         ),
@@ -170,8 +169,10 @@ class _ConnectButton extends HookConsumerWidget {
     if (!shouldSwitch) return;
 
     if (isServerRunning) {
-      final shouldStopServer = await _showStopServerDialog(context);
-      if (!shouldStopServer) return;
+      if (context.mounted) {
+        final shouldStopServer = await _showStopServerDialog(context);
+        if (!shouldStopServer) return;
+      }
 
       // Stop the server
       final serverService = ref.read(serverServiceProvider.notifier);
@@ -270,7 +271,10 @@ class _ServerList extends HookConsumerWidget {
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () => ref.invalidate(serversProvider),
+                onPressed: () async {
+                  await ref.read(discoveryServiceProvider.notifier).stop();
+                  ref.invalidate(serversProvider);
+                },
                 tooltip: 'Refresh',
               ),
               IconButton(
@@ -485,8 +489,8 @@ class _ServerList extends HookConsumerWidget {
   }
 }
 
-class _ServerInfo extends HookConsumerWidget {
-  const _ServerInfo();
+class _ServerSettings extends HookConsumerWidget {
+  const _ServerSettings();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -500,7 +504,7 @@ class _ServerInfo extends HookConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Server Info',
+              'Server Settings',
               style: theme.textTheme.titleMedium,
             ),
             const Gap(16),
@@ -543,40 +547,47 @@ class _ConnectionStatus extends HookConsumerWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Connection Status',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const Gap(4),
-                  Row(
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        isConnected ? Icons.link : Icons.link_off,
-                        color: isConnected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface.withAlpha(100),
-                        size: 20,
-                      ),
-                      const Gap(8),
                       Text(
-                        isConnected
-                            ? 'Connected to ${connectedServer?.name ?? "Unknown Server"}'
-                            : 'Not connected',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withAlpha(150),
-                        ),
+                        'Connection Status',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const Gap(4),
+                      Row(
+                        children: [
+                          Icon(
+                            isConnected ? Icons.link : Icons.link_off,
+                            color: isConnected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface.withAlpha(100),
+                            size: 20,
+                          ),
+                          const Gap(8),
+                          Text(
+                            isConnected
+                                ? 'Connected to ${connectedServer?.name ?? "Unknown Server"}'
+                                : 'Not connected',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withAlpha(150),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            const Gap(16),
+            const _ConnectButton(),
           ],
         ),
       ),

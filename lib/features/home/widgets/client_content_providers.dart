@@ -15,10 +15,6 @@ Stream<List<ServerInfo>> servers(Ref ref) async* {
   final currentMachineId = await systemService.getMachineId();
   final discoveredServers = discoveryService.discover();
 
-  ref.onDispose(() {
-    discoveryService.stop();
-  });
-
   await for (final serverList in discoveredServers) {
     // Filter out the current machine from the discovered servers
     final filteredServers = serverList
