@@ -1,3 +1,4 @@
+import 'package:desk_switch/core/services/client_service.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
 
@@ -6,18 +7,18 @@ class ServerCard extends StatelessWidget {
     super.key,
     required this.server,
     required this.isPinned,
-    required this.isConnected,
-    required this.isConnecting,
+    required this.isSelected,
+    required this.clientState,
     required this.onTap,
     required this.onPinToggle,
   });
 
   final ServerInfo server;
   final bool isPinned;
+  final bool isSelected;
+  final ClientServiceState clientState;
   final VoidCallback onTap;
   final VoidCallback onPinToggle;
-  final bool isConnected;
-  final bool isConnecting;
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +27,10 @@ class ServerCard extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.only(
         left: 16,
-        right: 4,
+        right: 8,
       ),
       selectedTileColor: theme.colorScheme.primaryContainer,
+      selected: isSelected,
       leading: Stack(
         children: [
           Padding(
@@ -97,54 +99,58 @@ class ServerCard extends StatelessWidget {
   Widget _buildStatusIndicator(ThemeData theme) {
     const size = 10.0;
 
-    if (isConnecting) {
-      // Show loading animation for connecting state
-      return SizedBox(
-        width: size,
-        height: size,
-        child: CircularProgressIndicator(
-          strokeWidth: 1.5,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            theme.colorScheme.primary,
+    switch (clientState) {
+      case ClientServiceState.connected:
+
+        // Show blue connected icon
+        return Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
           ),
-        ),
-      );
-    } else if (isConnected) {
-      // Show blue connected icon
-      return Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Colors.blue,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.check,
-          size: size - 2,
-          color: theme.colorScheme.surfaceContainerLow,
-        ),
-      );
-    } else if (server.isOnline) {
-      // Show green dot for online
-      return Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
-          color: Colors.green,
-          shape: BoxShape.circle,
-        ),
-      );
-    } else {
-      // Show outline variant dot for offline
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.outlineVariant,
-          shape: BoxShape.circle,
-        ),
-      );
+          child: Icon(
+            Icons.check,
+            size: size - 2,
+            color: theme.colorScheme.surfaceContainerLow,
+          ),
+        );
+      case ClientServiceState.connecting:
+        // Show loading animation for connecting state
+        return SizedBox(
+          width: size,
+          height: size,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
+          ),
+        );
+      case ClientServiceState.disconnected:
+        if (server.isOnline) {
+          // Show green dot for online
+          return Container(
+            width: size,
+            height: size,
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
+          );
+        } else {
+          // Show outline variant dot for offline
+          return Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.outlineVariant,
+              shape: BoxShape.circle,
+            ),
+          );
+        }
     }
   }
 }
