@@ -32,23 +32,9 @@ class DiscoveryService extends _$DiscoveryService {
       return;
     }
 
-    void stop() {
-      logger.info('🛑 Stopping discovery');
-      state = DiscoveryServiceState.idle;
-      _discoverySubscription?.cancel();
-      _discoverySubscription = null;
-      _discoveryController?.close();
-      _discoveryController = null;
-      _discovery?.stop();
-      _discovery = null;
-      _discoveredServers.clear();
-    }
-
     logger.info('🚀 Starting discovery');
     _discoveryController = StreamController<List<ServerInfo>>(
-      onCancel: () {
-        stop();
-      },
+      onCancel: stop,
     );
     state = DiscoveryServiceState.discovering;
     _discovery = BonsoirDiscovery(type: '_deskswitch._tcp');
@@ -124,16 +110,15 @@ class DiscoveryService extends _$DiscoveryService {
   }
 
   /// Stop discovery
-  void stop() {
-    if (state == DiscoveryServiceState.discovering) {
-      _discoverySubscription?.cancel();
-      _discoverySubscription = null;
-      _discoveryController?.close();
-      _discoveryController = null;
-      _discovery?.stop();
-      _discovery = null;
-      _discoveredServers.clear();
-      state = DiscoveryServiceState.idle;
-    }
+  Future<void> stop() async {
+    logger.info('🛑 Stopping discovery');
+    await _discoverySubscription?.cancel();
+    _discoverySubscription = null;
+    await _discoveryController?.close();
+    _discoveryController = null;
+    await _discovery?.stop();
+    _discovery = null;
+    _discoveredServers.clear();
+    state = DiscoveryServiceState.idle;
   }
 }

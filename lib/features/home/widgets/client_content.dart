@@ -13,7 +13,39 @@ class ClientContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return const Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: 4,
+          child: _ServerList(),
+        ),
+        Gap(8),
+        Expanded(
+          flex: 6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ConnectionStatus(),
+              Gap(8),
+              Expanded(child: _ServerInfo()),
+              Gap(8),
+              _ConnectButton(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConnectButton extends HookConsumerWidget {
+  const _ConnectButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedServer = ref.watch(selectedServerProvider);
+
     final clientService = ref.watch(clientServiceProvider.notifier);
     final clientState = ref.watch(clientServiceProvider);
     final connectedServer = clientService.connectedServer;
@@ -41,13 +73,15 @@ class ClientContent extends HookConsumerWidget {
         // If connected but a different server is selected
         buttonText = 'Connect';
         buttonIcon = Icons.play_arrow;
-        buttonAction = () => _connectToNewServer(
-          context,
-          ref,
-          selectedServer,
-          connectedServer,
-          isServerRunning,
-        );
+        buttonAction = selectedServer.isOnline
+            ? () => _connectToNewServer(
+                context,
+                ref,
+                selectedServer,
+                connectedServer,
+                isServerRunning,
+              )
+            : null;
       }
     } else {
       // Not connected
@@ -58,59 +92,35 @@ class ClientContent extends HookConsumerWidget {
       } else {
         buttonText = 'Connect';
         buttonIcon = Icons.play_arrow;
-        buttonAction = () =>
-            _connectToServer(context, ref, selectedServer, isServerRunning);
+        buttonAction = selectedServer.isOnline
+            ? () => _connectToServer(
+                context,
+                ref,
+                selectedServer,
+                isServerRunning,
+              )
+            : null;
       }
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          flex: 4,
-          child: _ServerList(
-            selectedServer: selectedServer,
-            onServerSelected: (server) {
-              ref.read(selectedServerProvider.notifier).select(server);
-            },
-          ),
-        ),
-        const Gap(8),
-        Expanded(
-          flex: 6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ConnectionStatus(
-                isConnected: isConnected,
-                connectedServer: connectedServer,
-              ),
-              const Gap(8),
-              Expanded(
-                child: _ServerInfo(
-                  selectedServer: selectedServer,
-                  isConnected: isConnected,
-                  isConnecting: isConnecting,
-                ),
-              ),
-              const Gap(8),
-              FilledButton.icon(
-                onPressed: buttonAction,
-                icon: isConnecting
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(buttonIcon),
-                label: Text(buttonText),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return FilledButton.icon(
+      onPressed: buttonAction,
+      icon: isConnecting
+          ? const SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(buttonIcon),
+      label: Text(buttonText),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        backgroundColor: buttonText == 'Disconnect'
+            ? Theme.of(context).colorScheme.error
+            : null,
+        foregroundColor: buttonText == 'Disconnect'
+            ? Theme.of(context).colorScheme.onError
+            : null,
+      ),
     );
   }
 
@@ -231,21 +241,17 @@ class ClientContent extends HookConsumerWidget {
 }
 
 class _ServerList extends HookConsumerWidget {
-  const _ServerList({
-    required this.selectedServer,
-    required this.onServerSelected,
-  });
-
-  final ServerInfo? selectedServer;
-  final ValueChanged<ServerInfo?> onServerSelected;
+  const _ServerList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final serversStream = ref.watch(serversProvider);
-    final pinnedNotifier = ref.read(pinnedServersProvider.notifier);
+    final pinnedNotifier = ref.watch(pinnedServersProvider.notifier);
     final clientService = ref.watch(clientServiceProvider.notifier);
     final clientState = ref.watch(clientServiceProvider);
+    final onServerSelected = ref.watch(selectedServerProvider.notifier).select;
+    final selectedServer = ref.watch(selectedServerProvider);
     final connectedServer = clientService.connectedServer;
 
     return Card(
@@ -269,7 +275,10 @@ class _ServerList extends HookConsumerWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.add),
-                onPressed: () => _showAddServerDialog(context),
+                onPressed: () => _showAddServerDialog(
+                  context,
+                  onServerSelected,
+                ),
                 tooltip: 'Add server',
               ),
               const Gap(8),
@@ -401,7 +410,10 @@ class _ServerList extends HookConsumerWidget {
     );
   }
 
-  void _showAddServerDialog(BuildContext context) {
+  void _showAddServerDialog(
+    BuildContext context,
+    ValueChanged<ServerInfo?> onServerSelected,
+  ) {
     final serverIpController = TextEditingController();
     final serverPortController = TextEditingController(text: '8080');
     final serverNameController = TextEditingController();
@@ -473,20 +485,13 @@ class _ServerList extends HookConsumerWidget {
   }
 }
 
-class _ServerInfo extends StatelessWidget {
-  const _ServerInfo({
-    required this.selectedServer,
-    required this.isConnected,
-    required this.isConnecting,
-  });
-
-  final ServerInfo? selectedServer;
-  final bool isConnected;
-  final bool isConnecting;
+class _ServerInfo extends HookConsumerWidget {
+  const _ServerInfo();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final selectedServer = ref.watch(selectedServerProvider);
 
     return Card(
       child: Padding(
@@ -523,18 +528,17 @@ class _ServerInfo extends StatelessWidget {
   }
 }
 
-class _ConnectionStatus extends StatelessWidget {
-  const _ConnectionStatus({
-    required this.isConnected,
-    required this.connectedServer,
-  });
-
-  final bool isConnected;
-  final ServerInfo? connectedServer;
+class _ConnectionStatus extends HookConsumerWidget {
+  const _ConnectionStatus();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final clientService = ref.watch(clientServiceProvider.notifier);
+    final clientState = ref.watch(clientServiceProvider);
+    final connectedServer = clientService.connectedServer;
+
+    final isConnected = clientState == ClientServiceState.connected;
 
     return Card(
       child: Padding(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:desk_switch/core/services/discovery_service.dart';
+import 'package:desk_switch/core/services/system_service.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -8,10 +9,26 @@ part 'client_content_providers.g.dart';
 
 // Provider for the list of online servers (future: combine with pins)
 @riverpod
-Stream<List<ServerInfo>> servers(Ref ref) {
+Stream<List<ServerInfo>> servers(Ref ref) async* {
   final discoveryService = ref.watch(discoveryServiceProvider.notifier);
-  // final pinnedIds = ref.watch(pinnedServersProvider);
-  return discoveryService.discover();
+  final systemService = ref.watch(systemServiceProvider.notifier);
+  final currentMachineId = await systemService.getMachineId();
+  final discoveredServers = discoveryService.discover();
+
+  ref.onDispose(() {
+    discoveryService.stop();
+  });
+
+  await for (final serverList in discoveredServers) {
+    // Filter out the current machine from the discovered servers
+    final filteredServers = serverList
+        .where(
+          (server) => server.id != currentMachineId,
+        )
+        .toList();
+
+    yield filteredServers;
+  }
 }
 
 // Notifier for selected server with availability checking

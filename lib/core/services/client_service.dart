@@ -86,18 +86,18 @@ class ClientService extends _$ClientService {
   }
 
   /// Disconnect from the server
-  void disconnect() {
+  Future<void> disconnect() async {
     if (_connectedServer != null) {
       logger.info('🔌 Disconnecting from server: \\${_connectedServer!.name}');
     }
 
     state = ClientServiceState.disconnected;
     _connectedServer = null;
-    _subscription?.cancel();
+    await _subscription?.cancel();
     _subscription = null;
-    _socket?.close(WebSocketStatus.goingAway);
+    await _socket?.close(WebSocketStatus.goingAway);
     _socket = null;
-    _messageController?.close();
+    await _messageController?.close();
     _messageController = null;
   }
 
@@ -107,10 +107,4 @@ class ClientService extends _$ClientService {
       _socket!.add(message);
     }
   }
-
-  /// Whether the client is currently connected
-  bool get isConnected => state == ClientServiceState.connected;
-
-  /// Whether the client is currently connecting
-  bool get isConnecting => state == ClientServiceState.connecting;
 }
