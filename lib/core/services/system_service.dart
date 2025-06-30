@@ -36,6 +36,10 @@ class SystemService extends _$SystemService {
     return _cachedMachineId ??= await _generateMachineId();
   }
 
+  Future<String> getMachineName() async {
+    return Platform.localHostname;
+  }
+
   Future<String> _generateMachineId() async {
     final deviceInfo = DeviceInfoPlugin();
 
