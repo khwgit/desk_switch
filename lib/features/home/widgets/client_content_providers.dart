@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 part 'client_content_providers.g.dart';
 
 // Provider for the list of online servers (future: combine with pins)
-@riverpod
+@Riverpod(keepAlive: true)
 Stream<List<ServerInfo>> servers(Ref ref) async* {
   final discoveryService = ref.watch(discoveryServiceProvider.notifier);
   // final clientService = ref.watch(clientServiceProvider.notifier);
@@ -39,7 +39,7 @@ Stream<List<ServerInfo>> servers(Ref ref) async* {
 }
 
 // Notifier for selected server with availability checking
-@riverpod
+@Riverpod(keepAlive: true)
 class SelectedServer extends _$SelectedServer {
   @override
   ServerInfo? build() {
