@@ -8,7 +8,7 @@ class ServerCard extends StatelessWidget {
     required this.server,
     required this.isPinned,
     required this.isSelected,
-    required this.clientState,
+    required this.state,
     required this.onTap,
     required this.onPinToggle,
   });
@@ -16,7 +16,7 @@ class ServerCard extends StatelessWidget {
   final ServerInfo server;
   final bool isPinned;
   final bool isSelected;
-  final ClientServiceState clientState;
+  final ClientServiceState state;
   final VoidCallback onTap;
   final VoidCallback onPinToggle;
 
@@ -34,7 +34,7 @@ class ServerCard extends StatelessWidget {
       leading: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.only(right: 4, bottom: 2),
+            padding: const EdgeInsets.only(right: 4, bottom: 4),
             child: Icon(
               Icons.computer,
               color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -58,28 +58,13 @@ class ServerCard extends StatelessWidget {
         server.name,
         style: theme.textTheme.titleSmall,
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (server.host != null)
-            Text(
-              server.host!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          if (server.port != null)
-            Text(
-              ':${server.port}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-        ],
+      subtitle: Text(
+        server.host ?? 'Unknown',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.6),
+        ),
       ),
       trailing: IconButton(
         icon: Icon(
@@ -99,9 +84,8 @@ class ServerCard extends StatelessWidget {
   Widget _buildStatusIndicator(ThemeData theme) {
     const size = 10.0;
 
-    switch (clientState) {
+    switch (state) {
       case ClientServiceState.connected:
-
         // Show blue connected icon
         return Container(
           width: size,

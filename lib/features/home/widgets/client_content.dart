@@ -27,7 +27,7 @@ class ClientContent extends HookConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: _ServerSettings()),
+              Expanded(child: _ServerInfo()),
               Gap(8),
               _ConnectionStatus(),
             ],
@@ -297,7 +297,7 @@ class _ServerList extends HookConsumerWidget {
                 if (servers.isEmpty) {
                   return Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -342,7 +342,7 @@ class _ServerList extends HookConsumerWidget {
                         server: server,
                         isSelected: selectedServer?.id == server.id,
                         isPinned: isPinned,
-                        clientState: connectedServer?.id == server.id
+                        state: connectedServer?.id == server.id
                             ? clientState
                             : ClientServiceState.disconnected,
                         onTap: () {
@@ -489,45 +489,170 @@ class _ServerList extends HookConsumerWidget {
   }
 }
 
-class _ServerSettings extends HookConsumerWidget {
-  const _ServerSettings();
+class _ServerInfo extends HookConsumerWidget {
+  const _ServerInfo();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final selectedServer = ref.watch(selectedServerProvider);
+    final autoConnectPrefs = ref.watch(autoConnectPreferencesProvider);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Server Settings',
-              style: theme.textTheme.titleMedium,
-            ),
-            const Gap(16),
-            Expanded(
-              child: selectedServer != null
-                  ? ListView(
-                      children: [],
-                    )
-                  : Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'Select a server to view server info',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withAlpha(150),
-                          ),
+      clipBehavior: Clip.antiAlias,
+      child: selectedServer != null
+          ? Column(
+              children: [
+                // Server Information
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Gap(16),
+                      Text(
+                        selectedServer.name,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const Gap(16),
+                      _InfoRow(
+                        label: 'Host',
+                        value: selectedServer.host ?? 'Unknown',
+                        icon: Icons.location_on,
+                      ),
+                      const Gap(8),
+                      _InfoRow(
+                        label: 'Port',
+                        value: selectedServer.port?.toString() ?? 'Unknown',
+                        icon: Icons.numbers,
+                      ),
+                      const Gap(8),
+                      _InfoRow(
+                        label: 'Status',
+                        value: selectedServer.isOnline ? 'Online' : 'Offline',
+                        icon: selectedServer.isOnline
+                            ? Icons.wifi
+                            : Icons.wifi_off,
+                        valueColor: selectedServer.isOnline
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.error,
+                      ),
+                    ],
+                  ),
+                ),
+                const Gap(4),
+                // TODO: Auto-connect Settings
+                // SwitchListTile(
+                //   title: const Text('Auto-connect'),
+                //   subtitle: Text(
+                //     'Automatically connect to this server when it becomes available',
+                //     style: theme.textTheme.bodySmall?.copyWith(
+                //       color: theme.colorScheme.onSurface.withAlpha(150),
+                //     ),
+                //   ),
+                //   secondary: const Icon(
+                //     Icons.auto_awesome,
+                //     size: 20,
+                //   ),
+                //   value: false,
+                //   onChanged: (value) {
+                //     ref
+                //         .read(
+                //           autoConnectPreferencesProvider.notifier,
+                //         )
+                //         .setAutoConnect(
+                //           selectedServer.id,
+                //           value,
+                //         );
+                //   },
+                // ),
+              ],
+            )
+          : Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.computer_outlined,
+                      size: 48,
+                      color: theme.colorScheme.onSurface.withAlpha(100),
+                    ),
+                    const Gap(8),
+                    Text(
+                      'No server selected',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(
+                          150,
                         ),
                       ),
                     ),
+                    const Gap(4),
+                    Text(
+                      'Choose a server to view its connection options',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withAlpha(
+                          100,
+                        ),
+                      ),
+                    ),
+                    // const Gap(32),
+                  ],
+                ),
+              ),
             ),
-          ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: theme.colorScheme.onSurface.withAlpha(150),
         ),
-      ),
+        const Gap(16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withAlpha(150),
+                ),
+              ),
+              Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: valueColor ?? theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
