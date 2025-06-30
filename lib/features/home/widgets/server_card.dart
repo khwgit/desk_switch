@@ -1,22 +1,24 @@
+import 'package:desk_switch/core/services/client_service.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
-import 'package:gap/gap.dart';
 
 class ServerCard extends StatelessWidget {
   const ServerCard({
     super.key,
     required this.server,
     required this.isPinned,
-    required this.isConnected,
+    required this.isSelected,
+    required this.state,
     required this.onTap,
     required this.onPinToggle,
   });
 
   final ServerInfo server;
   final bool isPinned;
+  final bool isSelected;
+  final ClientServiceState state;
   final VoidCallback onTap;
   final VoidCallback onPinToggle;
-  final bool isConnected;
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +27,10 @@ class ServerCard extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.only(
         left: 16,
-        right: 4,
+        right: 8,
       ),
       selectedTileColor: theme.colorScheme.primaryContainer,
+      selected: isSelected,
       leading: Stack(
         children: [
           Padding(
@@ -55,26 +58,13 @@ class ServerCard extends StatelessWidget {
         server.name,
         style: theme.textTheme.titleSmall,
       ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${server.ipAddress}:${server.port}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          if (server.lastSeen != null) ...[
-            const Gap(2),
-            Text(
-              'Last seen: ${_formatLastSeen(server.lastSeen!)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.4),
-                fontSize: 11,
-              ),
-            ),
-          ],
-        ],
+      subtitle: Text(
+        server.host ?? 'Unknown',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.6),
+        ),
       ),
       trailing: IconButton(
         icon: Icon(
@@ -94,62 +84,58 @@ class ServerCard extends StatelessWidget {
   Widget _buildStatusIndicator(ThemeData theme) {
     const size = 10.0;
 
-    if (isConnected) {
-      // Show blue connected icon
-      return Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.blue,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.check,
-          size: size - 2,
-          color: theme.colorScheme.surfaceContainerLow,
-        ),
-      );
-    } else if (server.isOnline) {
-      // Show green dot for online
-      return Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
-          color: Colors.green,
-          shape: BoxShape.circle,
-        ),
-      );
-    } else {
-      // Show outline variant dot for offline
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.outlineVariant,
-          shape: BoxShape.circle,
-        ),
-      );
-    }
-  }
-
-  String _formatLastSeen(String lastSeen) {
-    try {
-      final lastSeenTime = DateTime.parse(lastSeen);
-      final now = DateTime.now();
-      final difference = now.difference(lastSeenTime);
-
-      if (difference.inMinutes < 1) {
-        return 'Just now';
-      } else if (difference.inMinutes < 60) {
-        return '${difference.inMinutes}m ago';
-      } else if (difference.inHours < 24) {
-        return '${difference.inHours}h ago';
-      } else {
-        return '${difference.inDays}d ago';
-      }
-    } catch (e) {
-      return 'Unknown';
+    switch (state) {
+      case ClientServiceState.connected:
+        // Show blue connected icon
+        return Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.check,
+            size: size - 2,
+            color: theme.colorScheme.surfaceContainerLow,
+          ),
+        );
+      case ClientServiceState.connecting:
+        // Show loading animation for connecting state
+        return SizedBox(
+          width: size,
+          height: size,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.colorScheme.primary,
+            ),
+          ),
+        );
+      case ClientServiceState.disconnecting:
+      case ClientServiceState.disconnected:
+        if (server.isOnline) {
+          // Show green dot for online
+          return Container(
+            width: size,
+            height: size,
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
+          );
+        } else {
+          // Show outline variant dot for offline
+          return Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.outlineVariant,
+              shape: BoxShape.circle,
+            ),
+          );
+        }
     }
   }
 }

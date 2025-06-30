@@ -1,6 +1,10 @@
+import 'dart:io';
+
+import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/l10n/app_localizations.dart';
 import 'package:desk_switch/router/app_router.dart';
 import 'package:desk_switch/theme/app_theme.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
@@ -17,6 +21,35 @@ void main() async {
   await windowManager.setMaximumSize(const Size(800, 600));
   await windowManager.setResizable(false);
   await windowManager.center();
+
+  /// Handles errors caught within Flutter framework
+  FlutterError.onError = (details) async {
+    // FlutterError.presentError(details);
+    // await crashlytics?.recordFlutterError(details);
+    logger.error(
+      'FlutterError',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
+
+    /// Crashes app when error occurs in release mode
+    if (kReleaseMode) exit(1);
+  };
+
+  /// Passes all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+  PlatformDispatcher.instance.onError = (error, stack) {
+    // crashlytics?.recordError(error, stack);
+    // logger.shout('crash', error, stack);
+    logger.error(
+      'PlatformDispatcherError',
+      error: error,
+      stackTrace: stack,
+    );
+
+    /// Crashes app when error occurs in release mode
+    if (kReleaseMode) exit(1);
+    return true;
+  };
 
   runApp(const ProviderScope(child: DeskSwitchApp()));
 }

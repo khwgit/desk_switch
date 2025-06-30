@@ -8,11 +8,10 @@ abstract class ServerInfo with _$ServerInfo {
   const factory ServerInfo({
     required String id,
     required String name,
-    required String ipAddress,
-    required int port,
+    String? host,
+    int? port,
     @Default(false) bool isOnline,
-    String? lastSeen,
-    @Default({}) Map<String, dynamic> metadata,
+    @Default(<String, dynamic>{}) Map<String, dynamic> metadata,
   }) = _ServerInfo;
 
   factory ServerInfo.fromJson(Map<String, dynamic> json) =>

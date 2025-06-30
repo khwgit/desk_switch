@@ -1,27 +1,83 @@
 import 'dart:async';
 
-import 'package:desk_switch/core/services/client_service.dart';
+import 'package:desk_switch/core/services/discovery_service.dart';
+import 'package:desk_switch/core/services/system_service.dart';
 import 'package:desk_switch/models/server_info.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'client_content_providers.g.dart';
 
-// Notifier for selected server
-class SelectedServerNotifier extends Notifier<ServerInfo?> {
+// Provider for the list of online servers (future: combine with pins)
+@Riverpod(keepAlive: true)
+Stream<List<ServerInfo>> servers(Ref ref) async* {
+  final discoveryService = ref.watch(discoveryServiceProvider.notifier);
+  // final clientService = ref.watch(clientServiceProvider.notifier);
+  final systemService = ref.watch(systemServiceProvider.notifier);
+  final currentMachineId = await systemService.getMachineId();
+  yield* discoveryService.discover().asyncMap((serverList) {
+    return Future.value(
+      serverList.where((server) => server.id != currentMachineId).toList(),
+    );
+  });
+
+  // ref.onDispose(() => discoveryService.stop());
+
+  // await for (final serverList in discoveredServers) {
+  //   // Filter out the current machine from the discovered servers
+  //   final filteredServers = serverList
+  //       .where(
+  //         (server) => server.id != currentMachineId,
+  //       )
+  //       .toList();
+
+  //   // Trigger auto-connect for available servers
+  //   // await clientService.handleAutoConnect(filteredServers);
+
+  //   yield filteredServers;
+  // }
+}
+
+// Notifier for selected server with availability checking
+@Riverpod(keepAlive: true)
+class SelectedServer extends _$SelectedServer {
   @override
-  ServerInfo? build() => null;
+  ServerInfo? build() {
+    // Watch the servers stream to check availability
+    ref.listen(serversProvider, (previous, next) {
+      state = next.when(
+        data: (servers) {
+          // Get the current selected server from the previous state
+          final currentServer = state;
+
+          // If no server is selected, return null
+          if (currentServer == null) return null;
+
+          // Check if the current server is still available and online
+          final isStillAvailable = servers.any(
+            (server) => server.id == currentServer.id,
+          );
+
+          // If server is no longer available, return null (unselect it)
+          if (!isStillAvailable) return null;
+
+          // Server is still available, keep it selected
+          return currentServer;
+        },
+        loading: () => state, // Keep current state while loading
+        error: (error, stackTrace) => null, // Unselect on error
+      );
+    });
+
+    return null;
+  }
 
   void select(ServerInfo? server) => state = server;
 }
 
-final selectedServerProvider =
-    NotifierProvider<SelectedServerNotifier, ServerInfo?>(
-      SelectedServerNotifier.new,
-    );
-
 // Notifier for pinned server IDs
-class PinnedServersNotifier extends Notifier<Set<String>> {
+@riverpod
+class PinnedServers extends _$PinnedServers {
   @override
   Set<String> build() => <String>{};
 
@@ -36,70 +92,47 @@ class PinnedServersNotifier extends Notifier<Set<String>> {
   bool isPinned(String serverId) => state.contains(serverId);
 }
 
-final pinnedServersProvider =
-    NotifierProvider<PinnedServersNotifier, Set<String>>(
-      PinnedServersNotifier.new,
-    );
+@Riverpod(keepAlive: true)
+class AutoConnectPreferences extends _$AutoConnectPreferences {
+  static const String _prefix = 'auto_connect_';
 
-// Provider for the list of online servers (future: combine with pins)
-@riverpod
-Stream<List<ServerInfo>> servers(Ref ref) {
-  final clientService = ref.read(clientServiceProvider.notifier);
-  final pinnedIds = ref.watch(pinnedServersProvider);
-  final controller = StreamController<List<ServerInfo>>();
-  final serverMap = <String, ServerInfo>{};
-  const offlineTimeout = Duration(seconds: 5);
+  @override
+  Future<Map<String, bool>> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys();
+    final autoConnectKeys = keys.where((key) => key.startsWith(_prefix));
 
-  void emitCombinedServers() {
-    final now = DateTime.now();
-    // Online discovered servers
-    final discovered = serverMap.values.where((s) {
-      if (!s.isOnline) return false;
-      if (s.lastSeen == null) return true;
-      final lastSeen = DateTime.tryParse(s.lastSeen!);
-      if (lastSeen == null) return true;
-      return now.difference(lastSeen) <= offlineTimeout;
-    }).toList();
-    // Add all pinned servers (even if not discovered or offline)
-    final allServers = <String, ServerInfo>{
-      for (final s in discovered) s.id: s,
-    };
-    for (final id in pinnedIds) {
-      if (!allServers.containsKey(id)) {
-        final known = serverMap[id];
-        if (known != null) {
-          // Use last known details, but mark as offline
-          allServers[id] = known.copyWith(isOnline: false);
-        } else {
-          // Placeholder for never-seen pinned server
-          allServers[id] = ServerInfo(
-            id: id,
-            name: 'Pinned Server',
-            ipAddress: '',
-            port: 0,
-            isOnline: false,
-          );
-        }
-      }
+    final preferences = <String, bool>{};
+    for (final key in autoConnectKeys) {
+      final serverId = key.substring(_prefix.length);
+      preferences[serverId] = prefs.getBool(key) ?? false;
     }
-    controller.add(allServers.values.toList());
+
+    return preferences;
   }
 
-  final sub = clientService.discover().listen((server) {
-    serverMap[server.id] = server;
-    emitCombinedServers();
-  });
+  Future<void> setAutoConnect(String serverId, bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('$_prefix$serverId', enabled);
 
-  final timer = Timer.periodic(const Duration(seconds: 1), (_) {
-    emitCombinedServers();
-  });
+    final currentPreferences = state.value ?? {};
+    state = AsyncValue.data({
+      ...currentPreferences,
+      serverId: enabled,
+    });
+  }
 
-  controller.add([]);
+  Future<bool> getAutoConnect(String serverId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('$_prefix$serverId') ?? false;
+  }
 
-  ref.onDispose(() {
-    sub.cancel();
-    timer.cancel();
-    controller.close();
-  });
-  return controller.stream;
+  Future<void> removeAutoConnect(String serverId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_prefix$serverId');
+
+    final currentPreferences = state.value ?? {};
+    currentPreferences.remove(serverId);
+    state = AsyncValue.data(Map.from(currentPreferences));
+  }
 }

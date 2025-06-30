@@ -1,11 +1,14 @@
-import 'package:desk_switch/core/states/app_state.dart';
 import 'package:desk_switch/features/home/widgets/client_content.dart';
 import 'package:desk_switch/features/home/widgets/server_content.dart';
-import 'package:desk_switch/models/connection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+enum ConnectionMode {
+  client,
+  server,
+}
 
 class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
@@ -13,17 +16,11 @@ class HomeScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final connectionType = useState(
-      ref.watch(
-        appStateProvider.select(
-          (state) => state.connection?.type ?? ConnectionType.client,
-        ),
-      ),
-    );
+    final mode = useState(ConnectionMode.client);
 
     return Column(
       children: [
-        Gap(24),
+        const Gap(24),
         // Custom Mode Selection Cards
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -33,13 +30,13 @@ class HomeScreen extends HookConsumerWidget {
                 // Client Mode Card
                 Expanded(
                   child: _ModeCard(
-                    selected: connectionType.value == ConnectionType.client,
+                    selected: mode.value == ConnectionMode.client,
                     icon: Icons.input,
                     iconBg: theme.colorScheme.primary,
                     title: 'Client Mode',
                     subtitle: 'Use another computer\'s mouse and keyboard',
                     onTap: () {
-                      connectionType.value = ConnectionType.client;
+                      mode.value = ConnectionMode.client;
                     },
                   ),
                 ),
@@ -47,13 +44,13 @@ class HomeScreen extends HookConsumerWidget {
                 // Server Mode Card
                 Expanded(
                   child: _ModeCard(
-                    selected: connectionType.value == ConnectionType.server,
+                    selected: mode.value == ConnectionMode.server,
                     icon: Icons.dns,
                     iconBg: theme.colorScheme.secondary,
                     title: 'Server Mode',
                     subtitle: 'Share this computer\'s mouse and keyboard',
                     onTap: () {
-                      connectionType.value = ConnectionType.server;
+                      mode.value = ConnectionMode.server;
                     },
                   ),
                 ),
@@ -64,10 +61,10 @@ class HomeScreen extends HookConsumerWidget {
         // Mode-specific Content
         Expanded(
           child: Padding(
-            padding: EdgeInsetsGeometry.all(16),
-            child: switch (connectionType.value) {
-              ConnectionType.client => const ClientContent(),
-              ConnectionType.server => const ServerContent(),
+            padding: const EdgeInsetsGeometry.all(16),
+            child: switch (mode.value) {
+              ConnectionMode.client => const ClientContent(),
+              ConnectionMode.server => const ServerContent(),
             },
           ),
         ),

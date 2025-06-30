@@ -1,144 +1,122 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
+import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:web_socket_channel/status.dart' as status;
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'client_service.g.dart';
 
-@riverpod
+enum ClientServiceState {
+  disconnecting,
+  disconnected,
+  connecting,
+  connected,
+}
+
+@Riverpod(keepAlive: true)
 class ClientService extends _$ClientService {
   // WebSocket connection
-  WebSocketChannel? _channel;
+  WebSocket? _socket;
   StreamController<String>? _messageController;
   StreamSubscription? _subscription;
-  bool _isConnected = false;
-
-  // Discovery
-  static const _discoveryPort = 12345;
-  static const _multicastAddress = '239.255.255.250';
-  RawDatagramSocket? _discoverySocket;
-  StreamController<ServerInfo>? _discoveryController;
-  StreamSubscription? _discoverySubscription;
-  bool _isDiscovering = false;
+  ServerInfo? _connectedServer;
 
   @override
-  Stream<String> build() {
-    // By default, no connection/messages
-    return _messageController?.stream ?? Stream.empty();
+  ClientServiceState build() {
+    return ClientServiceState.disconnected;
   }
+
+  /// Get the message stream
+  Stream<String> messages() {
+    return _messageController?.stream ?? const Stream.empty();
+  }
+
+  /// Get the currently connected server
+  ServerInfo? get connectedServer => _connectedServer;
 
   /// Connect to a server using WebSocket
   Future<void> connect(ServerInfo server) async {
     disconnect(); // Clean up any previous connection
 
-    final uri = Uri.parse('ws://${server.ipAddress}:${server.port}');
-    _channel = WebSocketChannel.connect(uri);
-    _messageController = StreamController<String>();
-    _isConnected = true;
+    state = ClientServiceState.connecting;
+    _connectedServer = server;
 
-    // Listen to incoming messages
-    _subscription = _channel!.stream.listen(
-      (message) {
-        _messageController?.add(message);
-      },
-      onDone: () {
-        _isConnected = false;
-        _messageController?.close();
-      },
-      onError: (error) {
-        _isConnected = false;
-        _messageController?.addError(error);
-      },
-      cancelOnError: true,
-    );
-    // No need to update state directly; stream will update
+    try {
+      final uri = Uri.parse('ws://${server.host}:${server.port}');
+
+      logger.info(
+        '🔌 Connecting to server: ${server.name} at \\${uri.host}:\\${uri.port}',
+      );
+
+      _socket = await WebSocket.connect(uri.toString());
+      _messageController = StreamController<String>();
+
+      // Listen to incoming messages
+      _subscription = _socket!.listen(
+        (message) {
+          logger.info(message);
+          if (message is String) {
+            _messageController?.add(message);
+          }
+        },
+        onDone: () {
+          logger.info('🔌 Disconnected from server: \\${server.name}');
+          state = ClientServiceState.disconnected;
+          _connectedServer = null;
+          _messageController?.close();
+        },
+        onError: (error) {
+          logger.error('❌ Connection error to \\${server.name}: $error');
+          state = ClientServiceState.disconnected;
+          _connectedServer = null;
+          _messageController?.addError(error);
+        },
+        cancelOnError: true,
+      );
+
+      state = ClientServiceState.connected;
+      logger.info('✅ Successfully connected to server: \\${server.name}');
+    } catch (error) {
+      logger.error('❌ Failed to connect to server \\${server.name}: $error');
+      state = ClientServiceState.disconnected;
+      _connectedServer = null;
+      _messageController?.close();
+      rethrow;
+    }
   }
 
   /// Disconnect from the server
-  void disconnect() {
-    _isConnected = false;
-    _subscription?.cancel();
+  Future<void> disconnect() async {
+    if (state == ClientServiceState.disconnecting) {
+      logger.info('🔌 Already disconnecting, returning');
+      return;
+    }
+
+    if (state == ClientServiceState.disconnected) {
+      logger.info('🔌 Already disconnected, returning');
+      return;
+    }
+
+    if (_connectedServer != null) {
+      logger.info('🔌 Disconnecting from server: \\${_connectedServer!.name}');
+    }
+
+    state = ClientServiceState.disconnecting;
+    _connectedServer = null;
+    await _subscription?.cancel();
     _subscription = null;
-    _channel?.sink.close(status.goingAway);
-    _channel = null;
-    _messageController?.close();
+    await _socket?.close(WebSocketStatus.goingAway);
+    _socket = null;
+    await _messageController?.close();
     _messageController = null;
-    // No need to update state directly; stream will update
+    state = ClientServiceState.disconnected;
   }
 
   /// Send a message to the server
   void send(String message) {
-    if (_isConnected && _channel != null) {
-      _channel!.sink.add(message);
+    if (state == ClientServiceState.connected && _socket != null) {
+      _socket!.add(message);
     }
   }
-
-  /// Whether the client is currently connected
-  bool get isConnected => _isConnected;
-
-  /// Start discovering servers (UDP multicast)
-  Stream<ServerInfo> discover() {
-    /// Stop discovering servers
-    void stop() {
-      _isDiscovering = false;
-      _discoverySubscription?.cancel();
-      _discoverySubscription = null;
-      _discoveryController?.close();
-      _discoveryController = null;
-      if (_discoverySocket != null) {
-        try {
-          final multicastGroup = InternetAddress(_multicastAddress);
-          _discoverySocket!.leaveMulticast(multicastGroup);
-        } catch (_) {}
-        _discoverySocket!.close();
-        _discoverySocket = null;
-      }
-    }
-
-    _discoveryController = StreamController<ServerInfo>(
-      onCancel: () {
-        stop();
-      },
-    );
-    _isDiscovering = true;
-    RawDatagramSocket.bind(InternetAddress.anyIPv4, _discoveryPort).then((
-      socket,
-    ) {
-      _discoverySocket = socket;
-      try {
-        final multicastGroup = InternetAddress(_multicastAddress);
-        socket.joinMulticast(multicastGroup);
-      } catch (_) {}
-      _discoverySubscription = socket.listen((event) {
-        if (event == RawSocketEvent.read) {
-          final datagram = socket.receive();
-          if (datagram == null) return;
-          final message = String.fromCharCodes(datagram.data);
-          if (message.startsWith('{')) {
-            try {
-              final json = jsonDecode(message) as Map<String, dynamic>;
-              final type = json['type'] as String?;
-              if (type == 'DESK_SWITCH_SERVER_BROADCAST' ||
-                  type == 'DESK_SWITCH_SERVER_MULTICAST') {
-                final serverJson = json['server'] as Map<String, dynamic>;
-                final serverInfo = ServerInfo.fromJson(serverJson).copyWith(
-                  ipAddress: datagram.address.address,
-                  isOnline: true,
-                  lastSeen: DateTime.now().toIso8601String(),
-                );
-                _discoveryController?.add(serverInfo);
-              }
-            } catch (_) {}
-          }
-        }
-      });
-    });
-    return _discoveryController!.stream;
-  }
-
-  bool get isDiscovering => _isDiscovering;
 }
