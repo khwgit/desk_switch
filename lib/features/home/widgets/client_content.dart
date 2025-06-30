@@ -496,7 +496,6 @@ class _ServerInfo extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final selectedServer = ref.watch(selectedServerProvider);
-    final autoConnectPrefs = ref.watch(autoConnectPreferencesProvider);
 
     return Card(
       clipBehavior: Clip.antiAlias,
