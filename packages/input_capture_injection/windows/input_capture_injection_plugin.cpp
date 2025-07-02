@@ -292,7 +292,7 @@ namespace input_capture_injection
     }
     else if (method_call.method_name().compare("injectMouseInput") == 0)
     {
-      // Parse arguments and call SendInput for mouse
+      // Improved mouse injection logic
       if (method_call.arguments() && std::holds_alternative<flutter::EncodableMap>(*method_call.arguments()))
       {
         const auto &args = std::get<flutter::EncodableMap>(*method_call.arguments());
@@ -304,29 +304,39 @@ namespace input_capture_injection
           y = std::get<double>(args.at(flutter::EncodableValue("y")));
         if (args.count(flutter::EncodableValue("type")))
           type = std::get<std::string>(args.at(flutter::EncodableValue("type")));
+
         INPUT input = {0};
         input.type = INPUT_MOUSE;
-        input.mi.dx = static_cast<LONG>(x * 65535 / GetSystemMetrics(SM_CXSCREEN));
-        input.mi.dy = static_cast<LONG>(y * 65535 / GetSystemMetrics(SM_CYSCREEN));
-        input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE;
-        if (type == "leftMouseDown")
-          input.mi.dwFlags |= MOUSEEVENTF_LEFTDOWN;
-        else if (type == "leftMouseUp")
-          input.mi.dwFlags |= MOUSEEVENTF_LEFTUP;
-        else if (type == "rightMouseDown")
-          input.mi.dwFlags |= MOUSEEVENTF_RIGHTDOWN;
-        else if (type == "rightMouseUp")
-          input.mi.dwFlags |= MOUSEEVENTF_RIGHTUP;
-        else if (type == "mouseMoved")
-          input.mi.dwFlags |= MOUSEEVENTF_MOVE;
+
+        // Convert to absolute coordinates
+        LONG absX = static_cast<LONG>(x * 65535.0 / (GetSystemMetrics(SM_CXSCREEN) - 1));
+        LONG absY = static_cast<LONG>(y * 65535.0 / (GetSystemMetrics(SM_CYSCREEN) - 1));
+
+        if (type == "leftMouseDown" || type == "leftMouseUp" ||
+            type == "rightMouseDown" || type == "rightMouseUp" ||
+            type == "mouseMoved")
+        {
+          input.mi.dx = absX;
+          input.mi.dy = absY;
+          input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+          if (type == "leftMouseDown")
+            input.mi.dwFlags |= MOUSEEVENTF_LEFTDOWN;
+          if (type == "leftMouseUp")
+            input.mi.dwFlags |= MOUSEEVENTF_LEFTUP;
+          if (type == "rightMouseDown")
+            input.mi.dwFlags |= MOUSEEVENTF_RIGHTDOWN;
+          if (type == "rightMouseUp")
+            input.mi.dwFlags |= MOUSEEVENTF_RIGHTUP;
+          SendInput(1, &input, sizeof(INPUT));
+        }
         else if (type == "scrollWheel")
         {
           input.mi.dwFlags = MOUSEEVENTF_WHEEL;
           if (args.count(flutter::EncodableValue("deltaY")))
             input.mi.mouseData = static_cast<DWORD>(std::get<double>(args.at(flutter::EncodableValue("deltaY"))));
+          SendInput(1, &input, sizeof(INPUT));
         }
-        // TODO: Add other mouse types if needed
-        SendInput(1, &input, sizeof(INPUT));
+        // Add more cases as needed
         result->Success();
       }
       else
