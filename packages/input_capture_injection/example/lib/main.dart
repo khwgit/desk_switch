@@ -1,0 +1,497 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:input_capture_injection/input_capture_injection.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String _platformVersion = 'Unknown';
+  final _inputCaptureInjectionPlugin = InputCaptureInjection();
+
+  bool _capturePermissionGranted = false;
+  bool _injectionPermissionGranted = false;
+  bool _isKeyboardCapturing = false;
+  bool _isMouseCapturing = false;
+
+  final List<String> _inputEvents = [];
+  final ScrollController _inputEventsScrollController = ScrollController();
+
+  StreamSubscription<KeyboardInput>? _keyboardSubscription;
+  StreamSubscription<MouseInput>? _mouseSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    initPlatformState();
+  }
+
+  @override
+  void dispose() {
+    _keyboardSubscription?.cancel();
+    _mouseSubscription?.cancel();
+    _inputEventsScrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> initPlatformState() async {
+    String platformVersion;
+    try {
+      platformVersion =
+          await _inputCaptureInjectionPlugin.getPlatformVersion() ??
+          'Unknown platform version';
+    } on PlatformException {
+      platformVersion = 'Failed to get platform version.';
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _platformVersion = platformVersion;
+    });
+
+    // Check initial permissions
+    await checkPermissions();
+  }
+
+  Future<void> checkPermissions() async {
+    final captureRequested = await _inputCaptureInjectionPlugin
+        .isInputCaptureRequested();
+    final injectionRequested = await _inputCaptureInjectionPlugin
+        .isInputInjectionRequested();
+
+    if (mounted) {
+      setState(() {
+        _capturePermissionGranted = captureRequested;
+        _injectionPermissionGranted = injectionRequested;
+      });
+    }
+  }
+
+  Future<void> requestCapturePermission() async {
+    try {
+      final granted = await _inputCaptureInjectionPlugin.requestInputCapture();
+      if (mounted) {
+        setState(() {
+          _capturePermissionGranted = granted;
+        });
+      }
+      await checkPermissions();
+    } catch (e) {
+      _addInputEvent('Error requesting capture permission: $e');
+    }
+  }
+
+  Future<void> requestInjectionPermission() async {
+    try {
+      final granted = await _inputCaptureInjectionPlugin
+          .requestInputInjection();
+      if (mounted) {
+        setState(() {
+          _injectionPermissionGranted = granted;
+        });
+      }
+      await checkPermissions();
+    } catch (e) {
+      _addInputEvent('Error requesting injection permission: $e');
+    }
+  }
+
+  Future<void> startKeyboardCapture() async {
+    if (!_capturePermissionGranted) {
+      _addInputEvent('Capture permission not granted');
+      return;
+    }
+    try {
+      await _inputCaptureInjectionPlugin.initialize();
+      _keyboardSubscription = _inputCaptureInjectionPlugin.keyboardInputs().listen((
+        event,
+      ) {
+        _addInputEvent(
+          'Keyboard: ${event.type} - Key: ${event.code} - Modifiers: ${event.modifiers}',
+        );
+      });
+      if (mounted) {
+        setState(() {
+          _isKeyboardCapturing = true;
+        });
+      }
+      _addInputEvent('Started capturing keyboard events');
+    } catch (e) {
+      _addInputEvent('Error starting keyboard capture: $e');
+    }
+  }
+
+  Future<void> stopKeyboardCapture() async {
+    await _keyboardSubscription?.cancel();
+    _keyboardSubscription = null;
+    if (mounted) {
+      setState(() {
+        _isKeyboardCapturing = false;
+      });
+    }
+    _addInputEvent('Stopped capturing keyboard events');
+  }
+
+  Future<void> startMouseCapture() async {
+    if (!_capturePermissionGranted) {
+      _addInputEvent('Capture permission not granted');
+      return;
+    }
+    try {
+      await _inputCaptureInjectionPlugin.initialize();
+      _mouseSubscription = _inputCaptureInjectionPlugin.mouseInputs().listen((
+        event,
+      ) {
+        _addInputEvent(
+          'Mouse: ${event.type} - Pos: (${event.x.toStringAsFixed(1)}, ${event.y.toStringAsFixed(1)}) - Button: ${event.button}',
+        );
+      });
+      if (mounted) {
+        setState(() {
+          _isMouseCapturing = true;
+        });
+      }
+      _addInputEvent('Started capturing mouse events');
+    } catch (e) {
+      _addInputEvent('Error starting mouse capture: $e');
+    }
+  }
+
+  Future<void> stopMouseCapture() async {
+    await _mouseSubscription?.cancel();
+    _mouseSubscription = null;
+    if (mounted) {
+      setState(() {
+        _isMouseCapturing = false;
+      });
+    }
+    _addInputEvent('Stopped capturing mouse events');
+  }
+
+  Future<void> injectTestKeyEvent() async {
+    if (!_injectionPermissionGranted) {
+      _addInputEvent('Injection permission not granted');
+      return;
+    }
+
+    try {
+      await _inputCaptureInjectionPlugin.injectKeyboardInput(
+        KeyboardInput(
+          code: 0x00, // Key code for 'A'
+          type: KeyboardInputType.keyDown,
+          modifiers: [KeyModifier.shift],
+          character: 'A',
+          timestamp: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+      _addInputEvent('Injected keyboard event: Shift+A');
+    } catch (e) {
+      _addInputEvent('Error injecting keyboard event: $e');
+    }
+  }
+
+  Future<void> injectTestMouseEvent() async {
+    if (!_injectionPermissionGranted) {
+      _addInputEvent('Injection permission not granted');
+      return;
+    }
+
+    try {
+      await _inputCaptureInjectionPlugin.injectMouseInput(
+        MouseInput(
+          x: 100.0,
+          y: 100.0,
+          type: MouseInputType.leftMouseDown,
+          button: MouseButton.left,
+          clickCount: 1,
+          deltaX: 0.0,
+          deltaY: 0.0,
+          deltaZ: 0.0,
+          timestamp: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+      _addInputEvent('Injected mouse event: Left click at (100, 100)');
+    } catch (e) {
+      _addInputEvent('Error injecting mouse event: $e');
+    }
+  }
+
+  void _addInputEvent(String event) {
+    final timestamp = DateTime.now().toString().substring(11, 19);
+    final eventText = '[$timestamp] $event';
+    if (mounted) {
+      setState(() {
+        _inputEvents.add(eventText);
+        if (_inputEvents.length > 200) {
+          _inputEvents.removeAt(0);
+        }
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_inputEventsScrollController.hasClients) {
+          _inputEventsScrollController.animateTo(
+            _inputEventsScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
+
+  void _clearInputEvents() {
+    setState(() {
+      _inputEvents.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Input Capture & Injection Test'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Platform info
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Platform: $_platformVersion',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Capture Permission: ${_capturePermissionGranted ? "✅ Granted" : "❌ Not Granted"}',
+                      ),
+                      Text(
+                        'Injection Permission: ${_injectionPermissionGranted ? "✅ Granted" : "❌ Not Granted"}',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Permission buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: requestCapturePermission,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _capturePermissionGranted
+                            ? Colors.green
+                            : Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        _capturePermissionGranted
+                            ? 'Capture: Granted'
+                            : 'Request Capture Permission',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: requestInjectionPermission,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _injectionPermissionGranted
+                            ? Colors.green
+                            : Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        _injectionPermissionGranted
+                            ? 'Injection: Granted'
+                            : 'Request Injection Permission',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Capture control
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isKeyboardCapturing
+                          ? null
+                          : startKeyboardCapture,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isKeyboardCapturing
+                            ? Colors.grey
+                            : Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        _isKeyboardCapturing
+                            ? 'Keyboard Capturing...'
+                            : 'Start Keyboard Capture',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isKeyboardCapturing
+                          ? stopKeyboardCapture
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isKeyboardCapturing
+                            ? Colors.red
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Stop Keyboard Capture'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isMouseCapturing ? null : startMouseCapture,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isMouseCapturing
+                            ? Colors.grey
+                            : Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        _isMouseCapturing
+                            ? 'Mouse Capturing...'
+                            : 'Start Mouse Capture',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isMouseCapturing ? stopMouseCapture : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isMouseCapturing
+                            ? Colors.red
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Stop Mouse Capture'),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Injection test buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _injectionPermissionGranted
+                          ? injectTestKeyEvent
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _injectionPermissionGranted
+                            ? Colors.purple
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Inject Key Event'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _injectionPermissionGranted
+                          ? injectTestMouseEvent
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _injectionPermissionGranted
+                            ? Colors.purple
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Inject Mouse Event'),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Events display
+              Row(
+                children: [
+                  const Text(
+                    'Input Events:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _clearInputEvents,
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListView.builder(
+                    controller: _inputEventsScrollController,
+                    padding: const EdgeInsets.all(8),
+                    itemCount: _inputEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = _inputEvents[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          event,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
