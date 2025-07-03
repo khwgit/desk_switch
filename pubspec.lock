@@ -493,6 +493,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  input_capture_injection:
+    dependency: "direct main"
+    description:
+      path: "packages/input_capture_injection"
+      relative: true
+    source: path
+    version: "0.0.1"
   intl:
     dependency: "direct main"
     description:
@@ -789,6 +796,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.1"
+  protobuf:
+    dependency: "direct main"
+    description:
+      name: protobuf
+      sha256: "579fe5557eae58e3adca2e999e38f02441d8aa908703854a9e0a0f47fa857731"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   pub_semver:
     dependency: transitive
     description:

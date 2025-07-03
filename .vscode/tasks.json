@@ -77,7 +77,8 @@
 			"problemMatcher": [],
 			"detail": "Run build runner to generate code once",
 			"dependsOn": [
-				"generate l10n"
+				"generate l10n",
+				"generate proto"
 			]
 		},
 		{
@@ -87,7 +88,8 @@
 			"problemMatcher": [],
 			"detail": "Run build runner to watch generating code",
 			"dependsOn": [
-				"generate l10n"
+				"generate l10n",
+				"generate proto"
 			]
 		},
 		{
@@ -96,6 +98,13 @@
 			"command": "flutter gen-l10n",
 			"problemMatcher": [],
 			"detail": "Generate localization files"
+		},
+		{
+			"label": "generate proto",
+			"type": "shell",
+			"command": "protoc --proto_path=proto --dart_out=lib/models proto/*.proto",
+			"problemMatcher": [],
+			"detail": "Generate proto files"
 		},
 		{
 			"label": "generate splash screen",
