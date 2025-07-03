@@ -28,7 +28,7 @@ class MockInputCaptureInjectionPlatform
   }
 
   @override
-  Future<bool> isPermissionGranted([InputType? type]) {
+  Future<bool> isPermissionGranted([Set<InputType>? types]) {
     // For testing purposes, return true for all permissions
     return Future.value(true);
   }
@@ -52,14 +52,14 @@ class MockInputCaptureInjectionPlatform
   }
 
   @override
-  Future<bool> requestPermission([InputType? type]) {
+  Future<bool> requestPermission([Set<InputType>? types]) {
     // For testing purposes, return true for all permissions
     return Future.value(true);
   }
 
   @override
-  Future<bool> setInputBlocked(bool blocked, [InputType? type]) {
-    if (type == null) {
+  Future<bool> setInputBlocked(bool blocked, [Set<InputType>? types]) {
+    if (types == null) {
       if (blocked) {
         _blockedTypes.addAll(InputType.values);
       } else {
@@ -67,20 +67,25 @@ class MockInputCaptureInjectionPlatform
       }
     } else {
       if (blocked) {
-        _blockedTypes.add(type);
+        _blockedTypes.addAll(types);
       } else {
-        _blockedTypes.remove(type);
+        _blockedTypes.removeAll(types);
       }
     }
     return Future.value(true);
   }
 
   @override
-  Future<bool> isInputBlocked([InputType? type]) {
-    if (type == null) {
+  Future<bool> isInputBlocked([Set<InputType>? types]) {
+    if (types == null) {
       return Future.value(_blockedTypes.isNotEmpty);
     }
-    return Future.value(_blockedTypes.contains(type));
+    return Future.value(types.any((type) => _blockedTypes.contains(type)));
+  }
+
+  @override
+  Future<Set<InputType>> getBlockedInputs() {
+    return Future.value(_blockedTypes);
   }
 }
 
@@ -107,26 +112,69 @@ void main() {
     expect(await inputCaptureInjectionPlugin.isInputBlocked(), false);
 
     // Test blocking specific input type
-    await inputCaptureInjectionPlugin.setInputBlocked(true, InputType.keyboard);
+    await inputCaptureInjectionPlugin.setInputBlocked(true, {
+      InputType.keyboard,
+    });
     expect(
-      await inputCaptureInjectionPlugin.isInputBlocked(InputType.keyboard),
+      await inputCaptureInjectionPlugin.isInputBlocked({InputType.keyboard}),
       true,
     );
     expect(
-      await inputCaptureInjectionPlugin.isInputBlocked(InputType.mouse),
+      await inputCaptureInjectionPlugin.isInputBlocked({InputType.mouse}),
       false,
     );
 
     // Test blocking mouse input
-    await inputCaptureInjectionPlugin.setInputBlocked(true, InputType.mouse);
+    await inputCaptureInjectionPlugin.setInputBlocked(true, {InputType.mouse});
     expect(
-      await inputCaptureInjectionPlugin.isInputBlocked(InputType.mouse),
+      await inputCaptureInjectionPlugin.isInputBlocked({InputType.mouse}),
       true,
     );
     expect(
-      await inputCaptureInjectionPlugin.isInputBlocked(InputType.keyboard),
+      await inputCaptureInjectionPlugin.isInputBlocked({InputType.keyboard}),
       true,
     );
+  });
+
+  test('getBlockedInputs', () async {
+    InputCaptureInjection inputCaptureInjectionPlugin = InputCaptureInjection();
+    MockInputCaptureInjectionPlatform fakePlatform =
+        MockInputCaptureInjectionPlatform();
+    InputCaptureInjectionPlatform.instance = fakePlatform;
+
+    // Test initial state (no blocked inputs)
+    expect(await inputCaptureInjectionPlugin.getBlockedInputs(), isEmpty);
+
+    // Test blocking keyboard only
+    await inputCaptureInjectionPlugin.setInputBlocked(true, {
+      InputType.keyboard,
+    });
+    expect(await inputCaptureInjectionPlugin.getBlockedInputs(), {
+      InputType.keyboard,
+    });
+
+    // Test blocking mouse only
+    await inputCaptureInjectionPlugin.setInputBlocked(false, {
+      InputType.keyboard,
+    });
+    await inputCaptureInjectionPlugin.setInputBlocked(true, {InputType.mouse});
+    expect(await inputCaptureInjectionPlugin.getBlockedInputs(), {
+      InputType.mouse,
+    });
+
+    // Test blocking both keyboard and mouse
+    await inputCaptureInjectionPlugin.setInputBlocked(true, {
+      InputType.keyboard,
+      InputType.mouse,
+    });
+    expect(await inputCaptureInjectionPlugin.getBlockedInputs(), {
+      InputType.keyboard,
+      InputType.mouse,
+    });
+
+    // Test unblocking all
+    await inputCaptureInjectionPlugin.setInputBlocked(false);
+    expect(await inputCaptureInjectionPlugin.getBlockedInputs(), isEmpty);
   });
 
   test('requestPermission and isPermissionGranted', () async {
@@ -147,17 +195,17 @@ void main() {
 
     // Test requesting specific permission
     final keyboardPermissionResult = await inputCaptureInjectionPlugin
-        .requestPermission(InputType.keyboard);
+        .requestPermission({InputType.keyboard});
     expect(keyboardPermissionResult, true);
 
     // Test checking specific permission
     final keyboardPermissionCheck = await inputCaptureInjectionPlugin
-        .isPermissionGranted(InputType.keyboard);
+        .isPermissionGranted({InputType.keyboard});
     expect(keyboardPermissionCheck, true);
 
     // Test checking mouse permission
     final mousePermissionCheck = await inputCaptureInjectionPlugin
-        .isPermissionGranted(InputType.mouse);
+        .isPermissionGranted({InputType.mouse});
     expect(mousePermissionCheck, true);
   });
 }

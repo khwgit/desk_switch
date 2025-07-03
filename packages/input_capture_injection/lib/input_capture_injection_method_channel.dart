@@ -18,18 +18,18 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   );
 
   @override
-  Future<bool> requestPermission([InputType? type]) async {
+  Future<bool> requestPermission([Set<InputType>? types]) async {
     final result = await methodChannel.invokeMethod<bool>('requestPermission', {
-      'type': type?.name,
+      'types': types?.map((type) => type.name).toList(),
     });
     return result ?? false;
   }
 
   @override
-  Future<bool> isPermissionGranted([InputType? type]) async {
+  Future<bool> isPermissionGranted([Set<InputType>? types]) async {
     final result = await methodChannel.invokeMethod<bool>(
       'isPermissionGranted',
-      {'type': type?.name},
+      {'types': types?.map((type) => type.name).toList()},
     );
     return result ?? false;
   }
@@ -81,19 +81,41 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   }
 
   @override
-  Future<bool> setInputBlocked(bool blocked, [InputType? type]) async {
+  Future<bool> setInputBlocked(bool blocked, [Set<InputType>? types]) async {
     final result = await methodChannel.invokeMethod<bool>('setInputBlocked', {
       'blocked': blocked,
-      'type': type?.name,
+      'types': types?.map((type) => type.name).toList(),
     });
     return result ?? false;
   }
 
   @override
-  Future<bool> isInputBlocked([InputType? type]) async {
-    final result = await methodChannel.invokeMethod<bool>('isInputBlocked', {
-      'type': type?.name,
-    });
-    return result ?? false;
+  Future<bool> isInputBlocked([Set<InputType>? types]) async {
+    final inputs = await getBlockedInputs();
+    return types == null
+        ? inputs.isNotEmpty
+        : inputs.any((type) => types.contains(type));
+  }
+
+  @override
+  Future<Set<InputType>> getBlockedInputs() async {
+    final result = await methodChannel.invokeMethod<List<dynamic>>(
+      'getBlockedInputs',
+    );
+    if (result == null) {
+      return <InputType>{};
+    }
+
+    final blockedTypes = <InputType>{};
+    for (final typeName in result) {
+      if (typeName is String) {
+        final inputType = InputType.values.firstWhere(
+          (type) => type.name == typeName,
+          orElse: () => InputType.keyboard, // fallback, shouldn't happen
+        );
+        blockedTypes.add(inputType);
+      }
+    }
+    return blockedTypes;
   }
 }

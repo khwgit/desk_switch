@@ -26,14 +26,14 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
   }
 
   /// Requests permission to capture and inject input events.
-  /// When [type] is null, requests all input capture and injection permissions.
-  Future<bool> requestPermission([InputType? type]) {
+  /// When [types] is null, requests all input capture and injection permissions.
+  Future<bool> requestPermission([Set<InputType>? types]) {
     throw UnimplementedError('requestPermission() has not been implemented.');
   }
 
   /// Checks if permission is granted.
-  /// When [type] is null, returns false if any input capture and injection permission is not granted.
-  Future<bool> isPermissionGranted([InputType? type]) {
+  /// When [types] is null, returns false if any input capture and injection permission is not granted.
+  Future<bool> isPermissionGranted([Set<InputType>? types]) {
     throw UnimplementedError('isPermissionGranted() has not been implemented.');
   }
 
@@ -68,14 +68,19 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
   }
 
   /// Sets whether input should be blocked.
-  /// When [type] is null, blocks all inputs.
-  Future<bool> setInputBlocked(bool blocked, [InputType? type]) {
+  /// When [types] is null, blocks all inputs.
+  Future<bool> setInputBlocked(bool blocked, [Set<InputType>? types]) {
     throw UnimplementedError('setInputBlocked() has not been implemented.');
   }
 
   /// Checks if input is blocked.
-  /// When [type] is null, returns true if any input is blocked.
-  Future<bool> isInputBlocked([InputType? type]) {
+  /// When [types] is null, returns true if any input is blocked.
+  Future<bool> isInputBlocked([Set<InputType>? types]) {
     throw UnimplementedError('isInputBlocked() has not been implemented.');
+  }
+
+  /// Returns the set of currently blocked input types.
+  Future<Set<InputType>> getBlockedInputs() {
+    throw UnimplementedError('getBlockedInputs() has not been implemented.');
   }
 }

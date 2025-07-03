@@ -16,6 +16,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
   private var mouseInputSink: FlutterEventSink?
   private var isKeyboardStreamActive = false
   private var isMouseStreamActive = false
+  private var originalCursor: NSCursor?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "input_capture_injection", binaryMessenger: registrar.messenger)
@@ -67,8 +68,8 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
       injectKeyboardInput(call: call, result: result)
     case "setInputBlocked":
       setInputBlocked(call: call, result: result)
-    case "isInputBlocked":
-      isInputBlocked(call: call, result: result)
+    case "getBlockedInputs":
+      getBlockedInputs(call: call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -76,7 +77,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
 
   private func requestPermission(call: FlutterMethodCall, result: @escaping FlutterResult) {
     // let args = call.arguments as? [String: Any]
-    // let typeString = args?["type"] as? String
+    // let typesList = args?["types"] as? [String]
     
     if !AXIsProcessTrusted() {
       // Open System Preferences to Accessibility
@@ -90,16 +91,16 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
 
   private func isPermissionGranted(call: FlutterMethodCall, result: @escaping FlutterResult) {
     let args = call.arguments as? [String: Any]
-    let typeString = args?["type"] as? String
+    let typesList = args?["types"] as? [String]
     
     // For macOS, all permissions (capture and injection) are the same - they require Accessibility permission
     let hasPermission = AXIsProcessTrusted()
     
-    if typeString == nil {
-      // When type is null, return false if any permission is not granted
+    if typesList == nil {
+      // When types is null, return false if any permission is not granted
       result(hasPermission)
     } else {
-      // For specific type, return the same permission status
+      // For specific types, return the same permission status
       result(hasPermission)
     }
   }
@@ -373,19 +374,21 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
       return
     }
     
-    let typeString = args["type"] as? String
+    let typesList = args["types"] as? [String]
     
-    if let typeString = typeString {
-      // Block specific input type
-      if let inputType = InputType(rawValue: typeString) {
-        if blocked {
-          blockedInputTypes.insert(inputType)
+    if let typesList = typesList {
+      // Block specific input types
+      for typeString in typesList {
+        if let inputType = InputType(rawValue: typeString) {
+          if blocked {
+            blockedInputTypes.insert(inputType)
+          } else {
+            blockedInputTypes.remove(inputType)
+          }
         } else {
-          blockedInputTypes.remove(inputType)
+          result(FlutterError(code: "INVALID_INPUT_TYPE", message: "Invalid input type: \(typeString)", details: nil))
+          return
         }
-        result(true)
-      } else {
-        result(FlutterError(code: "INVALID_INPUT_TYPE", message: "Invalid input type", details: nil))
       }
     } else {
       // Block all inputs or unblock all inputs
@@ -394,25 +397,21 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
       } else {
         blockedInputTypes.removeAll()
       }
-      result(true)
     }
+    
+    // Update cursor visibility based on current blockedInputTypes state
+    if blockedInputTypes.contains(.mouse) {
+      hideCursor()
+    } else {
+      showCursor()
+    }
+    
+    result(true)
   }
 
-  private func isInputBlocked(call: FlutterMethodCall, result: @escaping FlutterResult) {
-    let args = call.arguments as? [String: Any]
-    let typeString = args?["type"] as? String
-    
-    if let typeString = typeString {
-      // Check specific input type
-      if let inputType = InputType(rawValue: typeString) {
-        result(blockedInputTypes.contains(inputType))
-      } else {
-        result(FlutterError(code: "INVALID_INPUT_TYPE", message: "Invalid input type", details: nil))
-      }
-    } else {
-      // Check if any input is blocked
-      result(!blockedInputTypes.isEmpty)
-    }
+  private func getBlockedInputs(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let blockedTypesList = blockedInputTypes.map { $0.rawValue }
+    result(blockedTypesList)
   }
 
   private func shouldBlockEvent(type: CGEventType) -> Bool {
@@ -428,8 +427,36 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     }
   }
 
+  private func hideCursor() {
+    if originalCursor != nil {
+      return
+    }
+    
+    DispatchQueue.main.async {
+      if self.originalCursor == nil {
+        self.originalCursor = NSCursor.current
+      }
+      NSCursor.hide()
+    }
+  }
+
+  private func showCursor() {
+    if originalCursor == nil {
+      return
+    }
+    
+    DispatchQueue.main.async {
+      NSCursor.unhide()
+      if let originalCursor = self.originalCursor {
+        originalCursor.set()
+        self.originalCursor = nil
+      }
+    }
+  }
+
   deinit {
     stopEventTap()
+    showCursor()
   }
 }
 

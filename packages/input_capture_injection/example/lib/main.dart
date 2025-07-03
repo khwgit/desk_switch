@@ -217,6 +217,37 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> blockInputsFor3Seconds() async {
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
+      return;
+    }
+
+    try {
+      _addInputEvent('Blocking all inputs for 3 seconds...');
+
+      // Block all inputs
+      await _inputCaptureInjectionPlugin.setInputBlocked(true);
+
+      // Show current blocked inputs
+      final blockedInputs = await _inputCaptureInjectionPlugin
+          .getBlockedInputs();
+      _addInputEvent(
+        'Currently blocked: ${blockedInputs.map((t) => t.name).join(', ')}',
+      );
+
+      // Wait for 3 seconds
+      await Future.delayed(const Duration(seconds: 3));
+
+      // Unblock all inputs
+      await _inputCaptureInjectionPlugin.setInputBlocked(false);
+
+      _addInputEvent('Input blocking completed');
+    } catch (e) {
+      _addInputEvent('Error blocking inputs: $e');
+    }
+  }
+
   void _addInputEvent(String event) {
     final timestamp = DateTime.now().toString().substring(11, 19);
     final eventText = '[$timestamp] $event';
@@ -405,6 +436,23 @@ class _MyAppState extends State<MyApp> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Input blocking test button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _permissionGranted ? blockInputsFor3Seconds : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _permissionGranted
+                        ? Colors.red
+                        : Colors.grey,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Block All Inputs for 3 Seconds'),
+                ),
               ),
 
               const SizedBox(height: 16),
