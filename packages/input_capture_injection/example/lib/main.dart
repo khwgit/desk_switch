@@ -248,6 +248,76 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> blockMouseFor3Seconds() async {
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
+      return;
+    }
+
+    try {
+      _addInputEvent('Blocking mouse input for 3 seconds...');
+
+      // Block mouse input
+      await _inputCaptureInjectionPlugin.setInputBlocked(true, {
+        InputType.mouse,
+      });
+
+      // Show current blocked inputs
+      final blockedInputs = await _inputCaptureInjectionPlugin
+          .getBlockedInputs();
+      _addInputEvent(
+        'Currently blocked: ${blockedInputs.map((t) => t.name).join(', ')}',
+      );
+
+      // Wait for 3 seconds
+      await Future.delayed(const Duration(seconds: 3));
+
+      // Unblock mouse input
+      await _inputCaptureInjectionPlugin.setInputBlocked(false, {
+        InputType.mouse,
+      });
+
+      _addInputEvent('Mouse blocking completed');
+    } catch (e) {
+      _addInputEvent('Error blocking mouse: $e');
+    }
+  }
+
+  Future<void> blockKeyboardFor3Seconds() async {
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
+      return;
+    }
+
+    try {
+      _addInputEvent('Blocking keyboard input for 3 seconds...');
+
+      // Block keyboard input
+      await _inputCaptureInjectionPlugin.setInputBlocked(true, {
+        InputType.keyboard,
+      });
+
+      // Show current blocked inputs
+      final blockedInputs = await _inputCaptureInjectionPlugin
+          .getBlockedInputs();
+      _addInputEvent(
+        'Currently blocked: ${blockedInputs.map((t) => t.name).join(', ')}',
+      );
+
+      // Wait for 3 seconds
+      await Future.delayed(const Duration(seconds: 3));
+
+      // Unblock keyboard input
+      await _inputCaptureInjectionPlugin.setInputBlocked(false, {
+        InputType.keyboard,
+      });
+
+      _addInputEvent('Keyboard blocking completed');
+    } catch (e) {
+      _addInputEvent('Error blocking keyboard: $e');
+    }
+  }
+
   void _addInputEvent(String event) {
     final timestamp = DateTime.now().toString().substring(11, 19);
     final eventText = '[$timestamp] $event';
@@ -440,7 +510,41 @@ class _MyAppState extends State<MyApp> {
 
               const SizedBox(height: 8),
 
-              // Input blocking test button
+              // Input blocking test buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _permissionGranted
+                          ? blockKeyboardFor3Seconds
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _permissionGranted
+                            ? Colors.orange
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Block Keyboard\n3 Seconds'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _permissionGranted
+                          ? blockMouseFor3Seconds
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _permissionGranted
+                            ? Colors.purple
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Block Mouse\n3 Seconds'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
