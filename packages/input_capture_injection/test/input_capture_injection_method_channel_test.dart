@@ -5,23 +5,23 @@ import 'package:input_capture_injection/input_capture_injection_method_channel.d
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelInputCaptureInjection platform = MethodChannelInputCaptureInjection();
+  MethodChannelInputCaptureInjection platform =
+      MethodChannelInputCaptureInjection();
   const MethodChannel channel = MethodChannel('input_capture_injection');
 
   setUp(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      channel,
-      (MethodCall methodCall) async {
-        return '42';
-      },
-    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          return '42';
+        });
   });
 
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await platform.getPlatformVersion(), '42');
+  test('platform instantiation', () async {
+    expect(platform, isNotNull);
   });
 }

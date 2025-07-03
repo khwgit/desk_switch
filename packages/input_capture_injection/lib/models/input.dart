@@ -25,8 +25,15 @@ sealed class Input with _$Input {
     required int timestamp,
   }) = MouseInput;
 
+  // const factory Input.clipboard({
+  //   required String text,
+  //   required int timestamp,
+  // }) = ClipboardInput;
+
   factory Input.fromJson(Map<String, dynamic> json) => _$InputFromJson(json);
 }
+
+enum InputType { keyboard, mouse }
 
 enum KeyboardInputType { keyDown, keyUp, flagsChanged }
 

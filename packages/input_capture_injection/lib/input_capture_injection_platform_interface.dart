@@ -25,25 +25,16 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+  /// Requests permission to capture and inject input events.
+  /// When [type] is null, requests all input capture and injection permissions.
+  Future<bool> requestPermission([InputType? type]) {
+    throw UnimplementedError('requestPermission() has not been implemented.');
   }
 
-  /// Initializes the plugin and prepares for input capture/injection.
-  Future<void> initialize() {
-    throw UnimplementedError('initialize() has not been implemented.');
-  }
-
-  /// Requests permission to capture keyboard and mouse events.
-  Future<bool> requestInputCapture() {
-    throw UnimplementedError('requestInputCapture() has not been implemented.');
-  }
-
-  /// Checks if input capture permission is required (not yet granted).
-  Future<bool> isInputCaptureRequested() {
-    throw UnimplementedError(
-      'isInputCaptureRequested() has not been implemented.',
-    );
+  /// Checks if permission is granted.
+  /// When [type] is null, returns false if any input capture and injection permission is not granted.
+  Future<bool> isPermissionGranted([InputType? type]) {
+    throw UnimplementedError('isPermissionGranted() has not been implemented.');
   }
 
   /// Stream of captured keyboard events.
@@ -61,20 +52,6 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
     throw UnimplementedError('inputs() has not been implemented.');
   }
 
-  /// Requests permission to inject keyboard and mouse events.
-  Future<bool> requestInputInjection() {
-    throw UnimplementedError(
-      'requestInputInjection() has not been implemented.',
-    );
-  }
-
-  /// Checks if input injection permission is required (not yet granted).
-  Future<bool> isInputInjectionRequested() {
-    throw UnimplementedError(
-      'isInputInjectionRequested() has not been implemented.',
-    );
-  }
-
   /// Injects a mouse event.
   Future<void> injectMouseInput(MouseInput input) {
     throw UnimplementedError('injectMouseInput() has not been implemented.');
@@ -83,5 +60,22 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
   /// Injects a keyboard event.
   Future<void> injectKeyboardInput(KeyboardInput input) {
     throw UnimplementedError('injectKeyboardInput() has not been implemented.');
+  }
+
+  /// Injects an input event.
+  Future<void> injectInput(Input input) {
+    throw UnimplementedError('injectInput() has not been implemented.');
+  }
+
+  /// Sets whether input should be blocked.
+  /// When [type] is null, blocks all inputs.
+  Future<bool> setInputBlocked(bool blocked, [InputType? type]) {
+    throw UnimplementedError('setInputBlocked() has not been implemented.');
+  }
+
+  /// Checks if input is blocked.
+  /// When [type] is null, returns true if any input is blocked.
+  Future<bool> isInputBlocked([InputType? type]) {
+    throw UnimplementedError('isInputBlocked() has not been implemented.');
   }
 }

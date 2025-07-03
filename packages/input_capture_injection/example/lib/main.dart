@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:input_capture_injection/input_capture_injection.dart';
 
 void main() {
@@ -19,8 +20,7 @@ class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   final _inputCaptureInjectionPlugin = InputCaptureInjection();
 
-  bool _capturePermissionGranted = false;
-  bool _injectionPermissionGranted = false;
+  bool _permissionGranted = false;
   bool _isKeyboardCapturing = false;
   bool _isMouseCapturing = false;
 
@@ -47,11 +47,21 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     String platformVersion;
     try {
-      platformVersion =
-          await _inputCaptureInjectionPlugin.getPlatformVersion() ??
-          'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isMacOS) {
+        final macOsInfo = await deviceInfo.macOsInfo;
+        platformVersion = 'macOS ${macOsInfo.osRelease}';
+      } else if (Platform.isWindows) {
+        final windowsInfo = await deviceInfo.windowsInfo;
+        platformVersion = 'Windows ${windowsInfo.buildNumber}';
+      } else if (Platform.isLinux) {
+        final linuxInfo = await deviceInfo.linuxInfo;
+        platformVersion = 'Linux ${linuxInfo.name} ${linuxInfo.version}';
+      } else {
+        platformVersion = 'Unknown platform';
+      }
+    } catch (e) {
+      platformVersion = 'Failed to get platform version: $e';
     }
 
     if (!mounted) return;
@@ -65,55 +75,36 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> checkPermissions() async {
-    final captureRequested = await _inputCaptureInjectionPlugin
-        .isInputCaptureRequested();
-    final injectionRequested = await _inputCaptureInjectionPlugin
-        .isInputInjectionRequested();
+    final permissionStatus = await _inputCaptureInjectionPlugin
+        .isPermissionGranted();
 
     if (mounted) {
       setState(() {
-        _capturePermissionGranted = captureRequested;
-        _injectionPermissionGranted = injectionRequested;
+        _permissionGranted = permissionStatus;
       });
     }
   }
 
-  Future<void> requestCapturePermission() async {
+  Future<void> requestPermission() async {
     try {
-      final granted = await _inputCaptureInjectionPlugin.requestInputCapture();
+      final granted = await _inputCaptureInjectionPlugin.requestPermission();
       if (mounted) {
         setState(() {
-          _capturePermissionGranted = granted;
+          _permissionGranted = granted;
         });
       }
       await checkPermissions();
     } catch (e) {
-      _addInputEvent('Error requesting capture permission: $e');
-    }
-  }
-
-  Future<void> requestInjectionPermission() async {
-    try {
-      final granted = await _inputCaptureInjectionPlugin
-          .requestInputInjection();
-      if (mounted) {
-        setState(() {
-          _injectionPermissionGranted = granted;
-        });
-      }
-      await checkPermissions();
-    } catch (e) {
-      _addInputEvent('Error requesting injection permission: $e');
+      _addInputEvent('Error requesting permission: $e');
     }
   }
 
   Future<void> startKeyboardCapture() async {
-    if (!_capturePermissionGranted) {
-      _addInputEvent('Capture permission not granted');
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
       return;
     }
     try {
-      await _inputCaptureInjectionPlugin.initialize();
       _keyboardSubscription = _inputCaptureInjectionPlugin.keyboardInputs().listen((
         event,
       ) {
@@ -144,12 +135,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> startMouseCapture() async {
-    if (!_capturePermissionGranted) {
-      _addInputEvent('Capture permission not granted');
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
       return;
     }
     try {
-      await _inputCaptureInjectionPlugin.initialize();
       _mouseSubscription = _inputCaptureInjectionPlugin.mouseInputs().listen((
         event,
       ) {
@@ -180,8 +170,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> injectTestKeyEvent() async {
-    if (!_injectionPermissionGranted) {
-      _addInputEvent('Injection permission not granted');
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
       return;
     }
 
@@ -202,8 +192,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> injectTestMouseEvent() async {
-    if (!_injectionPermissionGranted) {
-      _addInputEvent('Injection permission not granted');
+    if (!_permissionGranted) {
+      _addInputEvent('Permission not granted');
       return;
     }
 
@@ -282,10 +272,7 @@ class _MyAppState extends State<MyApp> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Capture Permission: ${_capturePermissionGranted ? "✅ Granted" : "❌ Not Granted"}',
-                      ),
-                      Text(
-                        'Injection Permission: ${_injectionPermissionGranted ? "✅ Granted" : "❌ Not Granted"}',
+                        'Permission: ${_permissionGranted ? "✅ Granted" : "❌ Not Granted"}',
                       ),
                     ],
                   ),
@@ -294,43 +281,20 @@ class _MyAppState extends State<MyApp> {
 
               const SizedBox(height: 16),
 
-              // Permission buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: requestCapturePermission,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _capturePermissionGranted
-                            ? Colors.green
-                            : Colors.orange,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(
-                        _capturePermissionGranted
-                            ? 'Capture: Granted'
-                            : 'Request Capture Permission',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: requestInjectionPermission,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _injectionPermissionGranted
-                            ? Colors.green
-                            : Colors.orange,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(
-                        _injectionPermissionGranted
-                            ? 'Injection: Granted'
-                            : 'Request Injection Permission',
-                      ),
-                    ),
-                  ),
-                ],
+              // Permission button
+              ElevatedButton(
+                onPressed: requestPermission,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _permissionGranted
+                      ? Colors.green
+                      : Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  _permissionGranted
+                      ? 'Permission: Granted'
+                      : 'Request Permission',
+                ),
               ),
 
               const SizedBox(height: 16),
@@ -415,11 +379,9 @@ class _MyAppState extends State<MyApp> {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _injectionPermissionGranted
-                          ? injectTestKeyEvent
-                          : null,
+                      onPressed: _permissionGranted ? injectTestKeyEvent : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _injectionPermissionGranted
+                        backgroundColor: _permissionGranted
                             ? Colors.purple
                             : Colors.grey,
                         foregroundColor: Colors.white,
@@ -430,11 +392,11 @@ class _MyAppState extends State<MyApp> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _injectionPermissionGranted
+                      onPressed: _permissionGranted
                           ? injectTestMouseEvent
                           : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _injectionPermissionGranted
+                        backgroundColor: _permissionGranted
                             ? Colors.purple
                             : Colors.grey,
                         foregroundColor: Colors.white,

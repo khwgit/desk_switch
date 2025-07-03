@@ -3,11 +3,19 @@ import FlutterMacOS
 import CoreGraphics
 import ApplicationServices
 
+enum InputType: String, CaseIterable {
+  case keyboard = "keyboard"
+  case mouse = "mouse"
+}
+
 public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
-  public var keyboardInputSink: FlutterEventSink?
-  public var mouseInputSink: FlutterEventSink?
   private var eventTap: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
+  private var blockedInputTypes: Set<InputType> = []
+  private var keyboardInputSink: FlutterEventSink?
+  private var mouseInputSink: FlutterEventSink?
+  private var isKeyboardStreamActive = false
+  private var isMouseStreamActive = false
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "input_capture_injection", binaryMessenger: registrar.messenger)
@@ -15,57 +23,61 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     registrar.addMethodCallDelegate(instance, channel: channel)
 
     let keyboardEventChannel = FlutterEventChannel(name: "input_capture_injection/keyboardInputs", binaryMessenger: registrar.messenger)
-    keyboardEventChannel.setStreamHandler(KeyboardInputStreamHandler(plugin: instance))
+    keyboardEventChannel.setStreamHandler(InputStreamHandler(
+      onListen: { [weak instance] arguments, events in
+        instance?.keyboardInputSink = events
+        instance?.isKeyboardStreamActive = true
+        instance?.startEventTap()
+        return nil
+      },
+      onCancel: { [weak instance] arguments in
+        instance?.keyboardInputSink = nil
+        instance?.isKeyboardStreamActive = false
+        instance?.stopEventTap()
+        return nil
+      }
+    ))
 
     let mouseEventChannel = FlutterEventChannel(name: "input_capture_injection/mouseInputs", binaryMessenger: registrar.messenger)
-    mouseEventChannel.setStreamHandler(MouseInputStreamHandler(plugin: instance))
+    mouseEventChannel.setStreamHandler(InputStreamHandler(
+      onListen: { [weak instance] arguments, events in
+        instance?.mouseInputSink = events
+        instance?.isMouseStreamActive = true
+        instance?.startEventTap()
+        return nil
+      },
+      onCancel: { [weak instance] arguments in
+        instance?.mouseInputSink = nil
+        instance?.isMouseStreamActive = false
+        instance?.stopEventTap()
+        return nil
+      }
+    ))
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
-    case "getPlatformVersion":
-      result("macOS " + ProcessInfo.processInfo.operatingSystemVersionString)
-    case "initialize":
-      initialize(result: result)
-    case "requestInputCapture":
-      requestInputCapture(result: result)
-    case "isInputCaptureRequested":
-      isInputCaptureRequested(result: result)
-    case "requestInputInjection":
-      requestInputInjection(result: result)
-    case "isInputInjectionRequested":
-      isInputInjectionRequested(result: result)
+    case "requestPermission":
+      requestPermission(call: call, result: result)
+    case "isPermissionGranted":
+      isPermissionGranted(call: call, result: result)
     case "injectMouseInput":
       injectMouseInput(call: call, result: result)
     case "injectKeyboardInput":
       injectKeyboardInput(call: call, result: result)
+    case "setInputBlocked":
+      setInputBlocked(call: call, result: result)
+    case "isInputBlocked":
+      isInputBlocked(call: call, result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
   }
 
-  private func initialize(result: @escaping FlutterResult) {
-    // Initialize any necessary resources
-    result(nil)
-  }
-
-  private func requestInputCapture(result: @escaping FlutterResult) {
-    if !AXIsProcessTrusted() {
-      // Open System Preferences to Accessibility
-      let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-      NSWorkspace.shared.open(url)
-      result(false)
-    } else {
-      startEventTap()
-      result(true)
-    }
-  }
-
-  private func isInputCaptureRequested(result: @escaping FlutterResult) {
-    result(AXIsProcessTrusted())
-  }
-
-  private func requestInputInjection(result: @escaping FlutterResult) {
+  private func requestPermission(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    // let args = call.arguments as? [String: Any]
+    // let typeString = args?["type"] as? String
+    
     if !AXIsProcessTrusted() {
       // Open System Preferences to Accessibility
       let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
@@ -76,12 +88,27 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  private func isInputInjectionRequested(result: @escaping FlutterResult) {
-    result(AXIsProcessTrusted())
+  private func isPermissionGranted(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let args = call.arguments as? [String: Any]
+    let typeString = args?["type"] as? String
+    
+    // For macOS, all permissions (capture and injection) are the same - they require Accessibility permission
+    let hasPermission = AXIsProcessTrusted()
+    
+    if typeString == nil {
+      // When type is null, return false if any permission is not granted
+      result(hasPermission)
+    } else {
+      // For specific type, return the same permission status
+      result(hasPermission)
+    }
   }
 
   private func startEventTap() {
     guard eventTap == nil else { return }
+    
+    // Only start if we have permission
+    guard AXIsProcessTrusted() else { return }
     
     // Break up the complex event mask expression
     let keyDownMask = CGEventMask(1 << CGEventType.keyDown.rawValue)
@@ -107,8 +134,14 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
                                 eventsOfInterest: eventMask,
                                 callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
       let plugin = Unmanaged<InputCaptureInjectionPlugin>.fromOpaque(refcon!).takeUnretainedValue()
+      
+      // Check if this event type should be blocked
+      let shouldBlock = plugin.shouldBlockEvent(type: type)
+      
       plugin.handleEvent(type: type, event: event)
-      return Unmanaged.passUnretained(event)
+      
+      // Return nil to block the event, or the event to allow it through
+      return shouldBlock ? nil : Unmanaged.passUnretained(event)
     }, userInfo: Unmanaged.passUnretained(self).toOpaque())
     
     if let tap = eventTap {
@@ -121,6 +154,10 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
   }
 
   private func stopEventTap() {
+    if isKeyboardStreamActive || isMouseStreamActive {
+      return
+    }
+
     if let tap = eventTap {
       CGEvent.tapEnable(tap: tap, enable: false)
       eventTap = nil
@@ -329,43 +366,88 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     result(nil)
   }
 
+  private func setInputBlocked(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let blocked = args["blocked"] as? Bool else {
+      result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
+      return
+    }
+    
+    let typeString = args["type"] as? String
+    
+    if let typeString = typeString {
+      // Block specific input type
+      if let inputType = InputType(rawValue: typeString) {
+        if blocked {
+          blockedInputTypes.insert(inputType)
+        } else {
+          blockedInputTypes.remove(inputType)
+        }
+        result(true)
+      } else {
+        result(FlutterError(code: "INVALID_INPUT_TYPE", message: "Invalid input type", details: nil))
+      }
+    } else {
+      // Block all inputs or unblock all inputs
+      if blocked {
+        blockedInputTypes = Set(InputType.allCases)
+      } else {
+        blockedInputTypes.removeAll()
+      }
+      result(true)
+    }
+  }
+
+  private func isInputBlocked(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    let args = call.arguments as? [String: Any]
+    let typeString = args?["type"] as? String
+    
+    if let typeString = typeString {
+      // Check specific input type
+      if let inputType = InputType(rawValue: typeString) {
+        result(blockedInputTypes.contains(inputType))
+      } else {
+        result(FlutterError(code: "INVALID_INPUT_TYPE", message: "Invalid input type", details: nil))
+      }
+    } else {
+      // Check if any input is blocked
+      result(!blockedInputTypes.isEmpty)
+    }
+  }
+
+  private func shouldBlockEvent(type: CGEventType) -> Bool {
+    switch type {
+    case .keyDown, .keyUp, .flagsChanged:
+      return blockedInputTypes.contains(.keyboard)
+    case .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
+         .mouseMoved, .leftMouseDragged, .rightMouseDragged, .scrollWheel,
+         .otherMouseDown, .otherMouseUp, .otherMouseDragged:
+      return blockedInputTypes.contains(.mouse)
+    default:
+      return false
+    }
+  }
+
   deinit {
     stopEventTap()
   }
 }
 
-class KeyboardInputStreamHandler: NSObject, FlutterStreamHandler {
-    weak var plugin: InputCaptureInjectionPlugin?
-
-    init(plugin: InputCaptureInjectionPlugin) {
-        self.plugin = plugin
-    }
-
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        plugin?.keyboardInputSink = events
-        return nil
-    }
-
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        plugin?.keyboardInputSink = nil
-        return nil
-    }
-}
-
-class MouseInputStreamHandler: NSObject, FlutterStreamHandler {
-    weak var plugin: InputCaptureInjectionPlugin?
-
-    init(plugin: InputCaptureInjectionPlugin) {
-        self.plugin = plugin
-    }
-
-    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        plugin?.mouseInputSink = events
-        return nil
-    }
-
-    func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        plugin?.mouseInputSink = nil
-        return nil
-    }
+private class InputStreamHandler: NSObject, FlutterStreamHandler {
+  private let onListen: (Any?, @escaping FlutterEventSink) -> FlutterError?
+  private let onCancel: (Any?) -> FlutterError?
+  
+  init(onListen: @escaping (Any?, @escaping FlutterEventSink) -> FlutterError?, 
+       onCancel: @escaping (Any?) -> FlutterError?) {
+    self.onListen = onListen
+    self.onCancel = onCancel
+  }
+  
+  func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+    return onListen(arguments, events)
+  }
+  
+  func onCancel(withArguments arguments: Any?) -> FlutterError? {
+    return onCancel(arguments)
+  }
 }

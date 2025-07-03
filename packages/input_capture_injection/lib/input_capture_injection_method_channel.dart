@@ -18,30 +18,18 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   );
 
   @override
-  Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>(
-      'getPlatformVersion',
-    );
-    return version;
-  }
-
-  @override
-  Future<void> initialize() async {
-    await methodChannel.invokeMethod('initialize');
-  }
-
-  @override
-  Future<bool> requestInputCapture() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'requestInputCapture',
-    );
+  Future<bool> requestPermission([InputType? type]) async {
+    final result = await methodChannel.invokeMethod<bool>('requestPermission', {
+      'type': type?.name,
+    });
     return result ?? false;
   }
 
   @override
-  Future<bool> isInputCaptureRequested() async {
+  Future<bool> isPermissionGranted([InputType? type]) async {
     final result = await methodChannel.invokeMethod<bool>(
-      'isInputCaptureRequested',
+      'isPermissionGranted',
+      {'type': type?.name},
     );
     return result ?? false;
   }
@@ -75,22 +63,6 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   }
 
   @override
-  Future<bool> requestInputInjection() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'requestInputInjection',
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> isInputInjectionRequested() async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'isInputInjectionRequested',
-    );
-    return result ?? false;
-  }
-
-  @override
   Future<void> injectMouseInput(MouseInput input) async {
     await methodChannel.invokeMethod('injectMouseInput', input.toJson());
   }
@@ -98,5 +70,30 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   @override
   Future<void> injectKeyboardInput(KeyboardInput input) async {
     await methodChannel.invokeMethod('injectKeyboardInput', input.toJson());
+  }
+
+  @override
+  Future<void> injectInput(Input input) async {
+    await switch (input) {
+      MouseInput() => injectMouseInput(input),
+      KeyboardInput() => injectKeyboardInput(input),
+    };
+  }
+
+  @override
+  Future<bool> setInputBlocked(bool blocked, [InputType? type]) async {
+    final result = await methodChannel.invokeMethod<bool>('setInputBlocked', {
+      'blocked': blocked,
+      'type': type?.name,
+    });
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> isInputBlocked([InputType? type]) async {
+    final result = await methodChannel.invokeMethod<bool>('isInputBlocked', {
+      'type': type?.name,
+    });
+    return result ?? false;
   }
 }
