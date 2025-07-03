@@ -17,6 +17,8 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <set>
+#include <string>
 
 namespace input_capture_injection
 {
@@ -32,11 +34,19 @@ namespace input_capture_injection
     std::atomic<bool> running{false};
     std::mutex hook_mutex;
 
+    // Input blocking state
+    std::set<std::string> blocked_input_types;
+    std::mutex blocked_input_mutex;
+
+    std::atomic<bool> cursor_hidden{false};
+
     LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
     {
       if (nCode == HC_ACTION && keyboard_sink)
       {
         KBDLLHOOKSTRUCT *p = (KBDLLHOOKSTRUCT *)lParam;
+
+        // Always capture the event first, regardless of blocking state
         flutter::EncodableMap event;
         event[flutter::EncodableValue("code")] = flutter::EncodableValue((int)p->vkCode);
         event[flutter::EncodableValue("type")] = flutter::EncodableValue(
@@ -51,13 +61,24 @@ namespace input_capture_injection
         if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
           modifiers.emplace_back("control");
         if (GetAsyncKeyState(VK_MENU) & 0x8000)
-          modifiers.emplace_back("alt");
+          modifiers.emplace_back("option");
         if (GetAsyncKeyState(VK_LWIN) & 0x8000 || GetAsyncKeyState(VK_RWIN) & 0x8000)
-          modifiers.emplace_back("win");
+          modifiers.emplace_back("command");
         event[flutter::EncodableValue("modifiers")] = flutter::EncodableValue(modifiers);
         event[flutter::EncodableValue("character")] = flutter::EncodableValue(); // Not available
         event[flutter::EncodableValue("timestamp")] = flutter::EncodableValue((int)p->time);
+
+        // Send the event to Dart side
         keyboard_sink->Success(flutter::EncodableValue(event));
+
+        // Check if keyboard input is blocked - if so, prevent it from reaching other applications
+        {
+          std::lock_guard<std::mutex> lock(blocked_input_mutex);
+          if (blocked_input_types.find("keyboard") != blocked_input_types.end())
+          {
+            return 1; // Block the input from reaching other applications
+          }
+        }
       }
       return CallNextHookEx(nullptr, nCode, wParam, lParam);
     }
@@ -67,6 +88,8 @@ namespace input_capture_injection
       if (nCode == HC_ACTION && mouse_sink)
       {
         MSLLHOOKSTRUCT *p = (MSLLHOOKSTRUCT *)lParam;
+
+        // Always capture the event first, regardless of blocking state
         flutter::EncodableMap event;
         event[flutter::EncodableValue("x")] = flutter::EncodableValue((double)p->pt.x);
         event[flutter::EncodableValue("y")] = flutter::EncodableValue((double)p->pt.y);
@@ -130,7 +153,18 @@ namespace input_capture_injection
         event[flutter::EncodableValue("deltaX")] = flutter::EncodableValue(deltaX);
         event[flutter::EncodableValue("deltaY")] = flutter::EncodableValue(deltaY);
         event[flutter::EncodableValue("deltaZ")] = flutter::EncodableValue(deltaZ);
+
+        // Send the event to Dart side
         mouse_sink->Success(flutter::EncodableValue(event));
+
+        // Check if mouse input is blocked - if so, prevent it from reaching other applications
+        {
+          std::lock_guard<std::mutex> lock(blocked_input_mutex);
+          if (blocked_input_types.find("mouse") != blocked_input_types.end())
+          {
+            return 1; // Block the input from reaching other applications
+          }
+        }
       }
       return CallNextHookEx(nullptr, nCode, wParam, lParam);
     }
@@ -251,44 +285,16 @@ namespace input_capture_injection
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
   {
-    if (method_call.method_name().compare("getPlatformVersion") == 0)
+    if (method_call.method_name().compare("requestPermission") == 0)
     {
-      std::ostringstream version_stream;
-      version_stream << "Windows ";
-      if (IsWindows10OrGreater())
-      {
-        version_stream << "10+";
-      }
-      else if (IsWindows8OrGreater())
-      {
-        version_stream << "8";
-      }
-      else if (IsWindows7OrGreater())
-      {
-        version_stream << "7";
-      }
-      result->Success(flutter::EncodableValue(version_stream.str()));
-    }
-    else if (method_call.method_name().compare("initialize") == 0)
-    {
-      result->Success();
-    }
-    else if (method_call.method_name().compare("requestInputCapture") == 0)
-    {
-      StartHooks();
+      // On Windows, we don't need explicit permission for input capture/injection
+      // The hooks will work as long as the application has appropriate privileges
       result->Success(true);
     }
-    else if (method_call.method_name().compare("isInputCaptureRequested") == 0)
+    else if (method_call.method_name().compare("isPermissionGranted") == 0)
     {
-      result->Success(true); // Always true for Windows
-    }
-    else if (method_call.method_name().compare("requestInputInjection") == 0)
-    {
-      result->Success(true); // Always true for Windows
-    }
-    else if (method_call.method_name().compare("isInputInjectionRequested") == 0)
-    {
-      result->Success(true); // Always true for Windows
+      // On Windows, permissions are typically granted by default for desktop applications
+      result->Success(true);
     }
     else if (method_call.method_name().compare("injectMouseInput") == 0)
     {
@@ -382,9 +388,9 @@ namespace input_capture_injection
             add_modifier(VK_SHIFT);
           else if (mod == "control")
             add_modifier(VK_CONTROL);
-          else if (mod == "alt")
+          else if (mod == "option")
             add_modifier(VK_MENU);
-          else if (mod == "win")
+          else if (mod == "command")
             add_modifier(VK_LWIN); // Only left win for simplicity
         }
         // Main key event
@@ -409,9 +415,9 @@ namespace input_capture_injection
             add_modifier_up(VK_SHIFT);
           else if (mod == "control")
             add_modifier_up(VK_CONTROL);
-          else if (mod == "alt")
+          else if (mod == "option")
             add_modifier_up(VK_MENU);
-          else if (mod == "win")
+          else if (mod == "command")
             add_modifier_up(VK_LWIN);
         }
         SendInput(static_cast<UINT>(inputs.size()), inputs.data(), sizeof(INPUT));
@@ -421,6 +427,81 @@ namespace input_capture_injection
       {
         result->Error("INVALID_ARGUMENTS", "Invalid keyboard event arguments");
       }
+    }
+    else if (method_call.method_name().compare("setInputBlocked") == 0)
+    {
+      if (method_call.arguments() && std::holds_alternative<flutter::EncodableMap>(*method_call.arguments()))
+      {
+        const auto &args = std::get<flutter::EncodableMap>(*method_call.arguments());
+        bool blocked = false;
+        if (args.count(flutter::EncodableValue("blocked")))
+          blocked = std::get<bool>(args.at(flutter::EncodableValue("blocked")));
+
+        std::lock_guard<std::mutex> lock(blocked_input_mutex);
+        // bool mouse_was_blocked = blocked_input_types.find("mouse") != blocked_input_types.end();
+        bool mouse_should_be_blocked = false;
+
+        if (args.count(flutter::EncodableValue("types")))
+        {
+          const auto &types = std::get<std::vector<flutter::EncodableValue>>(args.at(flutter::EncodableValue("types")));
+          for (const auto &type : types)
+          {
+            if (std::holds_alternative<std::string>(type))
+            {
+              std::string typeStr = std::get<std::string>(type);
+              if (blocked)
+                blocked_input_types.insert(typeStr);
+              else
+                blocked_input_types.erase(typeStr);
+            }
+          }
+        }
+        else
+        {
+          // Block/unblock all inputs
+          if (blocked)
+          {
+            blocked_input_types.insert("keyboard");
+            blocked_input_types.insert("mouse");
+          }
+          else
+          {
+            blocked_input_types.clear();
+          }
+        }
+
+        mouse_should_be_blocked = blocked_input_types.find("mouse") != blocked_input_types.end();
+        // Hide or show cursor as needed
+        if (mouse_should_be_blocked && !cursor_hidden)
+        {
+          while (ShowCursor(FALSE) >= 0)
+          {
+          }
+          cursor_hidden = true;
+        }
+        else if (!mouse_should_be_blocked && cursor_hidden)
+        {
+          while (ShowCursor(TRUE) < 0)
+          {
+          }
+          cursor_hidden = false;
+        }
+        result->Success(true);
+      }
+      else
+      {
+        result->Error("INVALID_ARGUMENTS", "Invalid arguments for setInputBlocked");
+      }
+    }
+    else if (method_call.method_name().compare("getBlockedInputs") == 0)
+    {
+      std::lock_guard<std::mutex> lock(blocked_input_mutex);
+      std::vector<flutter::EncodableValue> blocked_types;
+      for (const auto &type : blocked_input_types)
+      {
+        blocked_types.emplace_back(type);
+      }
+      result->Success(flutter::EncodableValue(blocked_types));
     }
     else
     {
