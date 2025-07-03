@@ -8,21 +8,21 @@ sealed class Input with _$Input {
   const factory Input.keyboard({
     required int code,
     required KeyboardInputType type,
-    required List<KeyModifier> modifiers,
-    required String? character,
-    required int timestamp,
+    @Default([]) List<KeyModifier> modifiers,
+    String? character,
+    int? timestamp,
   }) = KeyboardInput;
 
   const factory Input.mouse({
     required double x,
     required double y,
     required MouseInputType type,
-    required MouseButton button,
-    required int clickCount,
-    required double deltaX,
-    required double deltaY,
-    required double deltaZ,
-    required int timestamp,
+    MouseButton? button,
+    int? clickCount,
+    double? deltaX,
+    double? deltaY,
+    double? deltaZ,
+    int? timestamp,
   }) = MouseInput;
 
   // const factory Input.clipboard({
