@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:desk_switch/core/utils/logger.dart';
+import 'package:desk_switch/models/input.dart';
+import 'package:desk_switch/models/input.pb.dart' as pb;
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -18,7 +21,7 @@ enum ClientServiceState {
 class ClientService extends _$ClientService {
   // WebSocket connection
   WebSocket? _socket;
-  StreamController<String>? _messageController;
+  StreamController<Input>? _inputController;
   StreamSubscription? _subscription;
   ServerInfo? _connectedServer;
 
@@ -27,9 +30,9 @@ class ClientService extends _$ClientService {
     return ClientServiceState.disconnected;
   }
 
-  /// Get the message stream
-  Stream<String> messages() {
-    return _messageController?.stream ?? const Stream.empty();
+  /// Get the input stream
+  Stream<Input> inputs() {
+    return _inputController?.stream ?? const Stream.empty();
   }
 
   /// Get the currently connected server
@@ -50,27 +53,32 @@ class ClientService extends _$ClientService {
       );
 
       _socket = await WebSocket.connect(uri.toString());
-      _messageController = StreamController<String>();
+      _inputController = StreamController();
 
       // Listen to incoming messages
       _subscription = _socket!.listen(
-        (message) {
-          logger.info(message);
-          if (message is String) {
-            _messageController?.add(message);
+        (data) {
+          logger.info(data);
+          if (data is List<int> || data is Uint8List) {
+            try {
+              final pbInput = pb.Input.fromBuffer(data as List<int>);
+              _inputController?.add(pbInput.toModel());
+            } catch (e) {
+              // Handle parse error
+            }
           }
         },
         onDone: () {
           logger.info('🔌 Disconnected from server: \\${server.name}');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
-          _messageController?.close();
+          _inputController?.close();
         },
         onError: (error) {
           logger.error('❌ Connection error to \\${server.name}: $error');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
-          _messageController?.addError(error);
+          _inputController?.addError(error);
         },
         cancelOnError: true,
       );
@@ -81,7 +89,7 @@ class ClientService extends _$ClientService {
       logger.error('❌ Failed to connect to server \\${server.name}: $error');
       state = ClientServiceState.disconnected;
       _connectedServer = null;
-      _messageController?.close();
+      _inputController?.close();
       rethrow;
     }
   }
@@ -108,8 +116,8 @@ class ClientService extends _$ClientService {
     _subscription = null;
     await _socket?.close(WebSocketStatus.goingAway);
     _socket = null;
-    await _messageController?.close();
-    _messageController = null;
+    await _inputController?.close();
+    _inputController = null;
     state = ClientServiceState.disconnected;
   }
 
