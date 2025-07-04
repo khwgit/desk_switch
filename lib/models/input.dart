@@ -6,7 +6,7 @@ export 'package:input_capture_injection/models/input.dart';
 // Conversion between Dart model and protobuf
 extension InputToProto on Input {
   pb.Input toProto() {
-    switch (runtimeType) {
+    switch (this) {
       case KeyboardInput input:
         return pb.Input()
           ..inputType = pb.InputType.KEYBOARD
@@ -29,8 +29,6 @@ extension InputToProto on Input {
             ..deltaY = input.deltaY ?? 0
             ..deltaZ = input.deltaZ ?? 0
             ..timestamp = input.timestamp ?? 0);
-      default:
-        throw Exception('Unknown input type');
     }
   }
 }
