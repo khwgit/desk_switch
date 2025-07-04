@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:desk_switch/core/services/system_service.dart';
 import 'package:desk_switch/core/utils/logger.dart';
 import 'package:desk_switch/models/client_info.dart';
+import 'package:desk_switch/models/input.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -47,7 +48,10 @@ class ServerService extends _$ServerService {
   List<ClientInfo> get currentClients => _clients.values.toList();
 
   /// Start WebSocket server
-  Future<ServerInfo?> start() async {
+  Future<ServerInfo?> start({
+    required int? port,
+    required String? name,
+  }) async {
     if (state == ServerServiceState.running) {
       logger.info('🖥️ Server already running');
       return _serverInfo;
@@ -59,7 +63,7 @@ class ServerService extends _$ServerService {
       // Start WebSocket server
       _wsServer = await HttpServer.bind(
         InternetAddress.anyIPv4,
-        0, // TODO: get port from config
+        port ?? 0,
       );
       _wsServer!.listen((HttpRequest request) async {
         if (WebSocketTransformer.isUpgradeRequest(request)) {
@@ -116,9 +120,10 @@ class ServerService extends _$ServerService {
 
       _serverInfo = ServerInfo(
         id: await systemService.getMachineId(),
-        name: await systemService.getMachineName(),
+        name: name ?? await systemService.getMachineName(),
         port: _wsServer!.port,
         host: _wsServer!.address.address,
+        isOnline: true,
       );
       state = ServerServiceState.running;
       logger.info(
@@ -161,11 +166,12 @@ class ServerService extends _$ServerService {
     }
   }
 
-  /// Send a message to all connected clients or a specific client
-  void send(String message, [String? clientId]) {
+  /// Send an Input to all connected clients or a specific client
+  void sendInput(Input input, [String? clientId]) {
+    final bytes = List<int>.from(input.toProto().writeToBuffer());
     for (final client in _clients.values) {
       if (clientId == null || client.id == clientId) {
-        client.socket?.add(message);
+        client.socket?.add(bytes);
       }
     }
   }

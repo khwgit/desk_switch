@@ -65,6 +65,7 @@ class ClientService extends _$ClientService {
               _inputController?.add(pbInput.toModel());
             } catch (e) {
               // Handle parse error
+              logger.error('❌ Failed to parse input: $e');
             }
           }
         },
