@@ -12,6 +12,8 @@ targets:
             - "**/models/**.dart"
             - "**/states/**.dart"
             - "**/errors/**.dart"
+            - "**/services/**.dart"
+            - "**/providers/**.dart"
       freezed:
         enabled: true
         options:
@@ -24,6 +26,8 @@ targets:
             - "**/models/**.dart"
             - "**/states/**.dart"
             - "**/errors/**.dart"
+            - "**/services/**.dart"
+            - "**/providers/**.dart"
       riverpod_generator:
         enabled: true
         generate_for:
