@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:desk_switch/core/services/client_service.dart';
 import 'package:desk_switch/core/services/discovery_service.dart';
 import 'package:desk_switch/core/services/system_service.dart';
@@ -31,24 +32,9 @@ class SelectedServer extends _$SelectedServer {
     // Watch the servers stream to check availability
     ref.listen(serversProvider, (previous, next) {
       state = next.when(
-        data: (servers) {
-          // Get the current selected server from the previous state
-          final currentServer = state;
-
-          // If no server is selected, return null
-          if (currentServer == null) return null;
-
-          // Check if the current server is still available and online
-          final isStillAvailable = servers.any(
-            (server) => server.id == currentServer.id,
-          );
-
-          // If server is no longer available, return null (unselect it)
-          if (!isStillAvailable) return null;
-
-          // Server is still available, keep it selected
-          return currentServer;
-        },
+        data: (servers) => servers.firstWhereOrNull(
+          (server) => server.id == state?.id,
+        ),
         loading: () => state, // Keep current state while loading
         error: (error, stackTrace) => null, // Unselect on error
       );

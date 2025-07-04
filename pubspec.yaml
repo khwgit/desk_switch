@@ -50,6 +50,7 @@ dependencies:
   intl: ^0.20.2
   gap: ^3.0.1
   package_info_plus: ^8.3.0
+  collection: ^1.19.1
 
 dev_dependencies:
   flutter_test:
