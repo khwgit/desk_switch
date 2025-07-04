@@ -58,11 +58,11 @@ class ClientService extends _$ClientService {
       // Listen to incoming messages
       _subscription = _socket!.listen(
         (data) {
-          logger.info(data);
           if (data is List<int> || data is Uint8List) {
             try {
-              final pbInput = pb.Input.fromBuffer(data as List<int>);
-              _inputController?.add(pbInput.toModel());
+              final input = pb.Input.fromBuffer(data as List<int>).toModel();
+              _inputController?.add(input);
+              logger.info('🔌 Received input: $input');
             } catch (e) {
               // Handle parse error
               logger.error('❌ Failed to parse input: $e');
