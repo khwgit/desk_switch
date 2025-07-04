@@ -1,5 +1,6 @@
+import 'package:desk_switch/features/home/providers/server_content_providers.dart';
+import 'package:desk_switch/features/home/providers/shared_providers.dart';
 import 'package:desk_switch/features/home/widgets/arrange_displays_dialog.dart';
-import 'package:desk_switch/features/home/widgets/server_content_providers.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -38,8 +39,6 @@ class _ServerProfile extends HookConsumerWidget {
     final theme = Theme.of(context);
     final isServerRunning = ref.watch(serverRunningProvider);
     final profileAsync = ref.watch(serverProfileProvider);
-    final serverService = ref.read(serverServiceProvider.notifier);
-    final broadcastService = ref.read(broadcastServiceProvider.notifier);
 
     return Card(
       child: Padding(
@@ -69,8 +68,6 @@ class _ServerProfile extends HookConsumerWidget {
                     const Spacer(),
                     _StartButton(
                       isServerRunning: isServerRunning,
-                      serverService: serverService,
-                      broadcastService: broadcastService,
                     ),
                   ],
                 ),
@@ -92,31 +89,18 @@ class _ServerProfile extends HookConsumerWidget {
 
 class _StartButton extends HookConsumerWidget {
   final bool isServerRunning;
-  final dynamic serverService;
-  final dynamic broadcastService;
 
   const _StartButton({
     required this.isServerRunning,
-    required this.serverService,
-    required this.broadcastService,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final server = ref.watch(serverProvider.notifier);
     return FilledButton.icon(
       onPressed: isServerRunning
-          ? () async {
-              await serverService.stop();
-              await broadcastService.stop();
-              ref.invalidate(serverRunningProvider);
-            }
-          : () async {
-              final serverInfo = await serverService.start();
-              if (serverInfo != null) {
-                await broadcastService.start(serverInfo);
-              }
-              ref.invalidate(serverRunningProvider);
-            },
+          ? () async => await server.stop()
+          : () async => await server.start(),
       icon: Icon(isServerRunning ? Icons.stop : Icons.play_arrow),
       label: Text(isServerRunning ? 'Stop' : 'Start Server'),
       style: FilledButton.styleFrom(
@@ -364,214 +348,14 @@ class _MonitorArrangementButton extends HookConsumerWidget {
   }
 }
 
-class _MonitorArrangementDialog extends HookConsumerWidget {
-  const _MonitorArrangementDialog();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    // Mock monitor data - replace with actual monitor detection
-    final monitors = [
-      {'name': 'Primary Display', 'resolution': '1920x1080', 'enabled': true},
-      {'name': 'Secondary Display', 'resolution': '2560x1440', 'enabled': true},
-      {'name': 'External Monitor', 'resolution': '1366x768', 'enabled': false},
-    ];
-
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.display_settings,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  const Gap(8),
-                  Text(
-                    'Monitor Arrangement',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Available Monitors',
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const Gap(8),
-                    Text(
-                      'Configure which monitors to share and how they should be arranged for connected clients.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const Gap(16),
-                    // Monitor List
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: monitors.length,
-                        separatorBuilder: (context, index) => const Gap(8),
-                        itemBuilder: (context, index) {
-                          final monitor = monitors[index];
-                          return _MonitorItem(
-                            name: monitor['name'] as String,
-                            resolution: monitor['resolution'] as String,
-                            enabled: monitor['enabled'] as bool,
-                            onToggle: (value) {
-                              // TODO: Update monitor enabled state
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const Gap(16),
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              // TODO: Refresh monitor list
-                            },
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Refresh'),
-                          ),
-                        ),
-                        const Gap(8),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              // TODO: Apply monitor arrangement
-                              Navigator.of(context).pop();
-                            },
-                            icon: const Icon(Icons.check, size: 16),
-                            label: const Text('Apply'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MonitorItem extends HookConsumerWidget {
-  final String name;
-  final String resolution;
-  final bool enabled;
-  final ValueChanged<bool> onToggle;
-
-  const _MonitorItem({
-    required this.name,
-    required this.resolution,
-    required this.enabled,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Monitor Icon
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: enabled
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.monitor,
-                size: 20,
-                color: enabled
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const Gap(12),
-            // Monitor Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    resolution,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Toggle Switch
-            Switch(
-              value: enabled,
-              onChanged: onToggle,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ClientList extends HookConsumerWidget {
   const _ClientList();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final serverState = ref.watch(serverServiceProvider);
+    final isServerRunning = ref.watch(serverRunningProvider);
     final clientsAsync = ref.watch(clientsProvider);
-    final isServerRunning = serverState == ServerServiceState.running;
 
     return Card(
       child: Column(
@@ -645,7 +429,7 @@ class _ClientList extends HookConsumerWidget {
                                 .map(
                                   (c) => ListTile(
                                     leading: const Icon(Icons.computer),
-                                    title: Text(c.name ?? c.id),
+                                    title: Text(c.name),
                                   ),
                                 )
                                 .toList(),

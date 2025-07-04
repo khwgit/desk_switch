@@ -26,3 +26,7 @@ targets:
             - "**/errors/**.dart"
       riverpod_generator:
         enabled: true
+        generate_for:
+          include:
+            - "**/services/**.dart"
+            - "**/providers/**.dart"

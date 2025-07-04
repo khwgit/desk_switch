@@ -1,8 +1,10 @@
+import 'package:desk_switch/core/services/broadcast_service.dart';
 import 'package:desk_switch/core/services/client_service.dart';
 import 'package:desk_switch/core/services/discovery_service.dart';
-import 'package:desk_switch/features/home/widgets/client_content_providers.dart';
+import 'package:desk_switch/core/services/server_service.dart';
+import 'package:desk_switch/features/home/providers/client_content_providers.dart';
+import 'package:desk_switch/features/home/providers/shared_providers.dart';
 import 'package:desk_switch/features/home/widgets/server_card.dart';
-import 'package:desk_switch/features/home/widgets/server_content_providers.dart';
 import 'package:desk_switch/models/server_info.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
