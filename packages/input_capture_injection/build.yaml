@@ -24,5 +24,3 @@ targets:
             - "**/models/**.dart"
             - "**/states/**.dart"
             - "**/errors/**.dart"
-      riverpod_generator:
-        enabled: true
