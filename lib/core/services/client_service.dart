@@ -21,9 +21,9 @@ enum ClientServiceState {
 class ClientService extends _$ClientService {
   // WebSocket connection
   WebSocket? _socket;
-  StreamController<Input>? _inputController;
   StreamSubscription? _subscription;
   ServerInfo? _connectedServer;
+  final _messageController = StreamController<Input>.broadcast();
 
   @override
   ClientServiceState build() {
@@ -32,7 +32,7 @@ class ClientService extends _$ClientService {
 
   /// Get the input stream
   Stream<Input> inputs() {
-    return _inputController?.stream ?? const Stream.empty();
+    return _messageController.stream;
   }
 
   /// Get the currently connected server
@@ -53,7 +53,6 @@ class ClientService extends _$ClientService {
       );
 
       _socket = await WebSocket.connect(uri.toString());
-      _inputController = StreamController();
 
       // Listen to incoming messages
       _subscription = _socket!.listen(
@@ -61,8 +60,7 @@ class ClientService extends _$ClientService {
           if (data is List<int> || data is Uint8List) {
             try {
               final input = pb.Input.fromBuffer(data as List<int>).toModel();
-              _inputController?.add(input);
-              logger.info('🔌 Received input: $input');
+              _messageController.add(input);
             } catch (e) {
               // Handle parse error
               logger.error('❌ Failed to parse input: $e');
@@ -73,13 +71,12 @@ class ClientService extends _$ClientService {
           logger.info('🔌 Disconnected from server: \\${server.name}');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
-          _inputController?.close();
         },
         onError: (error) {
           logger.error('❌ Connection error to \\${server.name}: $error');
           state = ClientServiceState.disconnected;
           _connectedServer = null;
-          _inputController?.addError(error);
+          _messageController.addError(error);
         },
         cancelOnError: true,
       );
@@ -90,7 +87,6 @@ class ClientService extends _$ClientService {
       logger.error('❌ Failed to connect to server \\${server.name}: $error');
       state = ClientServiceState.disconnected;
       _connectedServer = null;
-      _inputController?.close();
       rethrow;
     }
   }
@@ -117,8 +113,6 @@ class ClientService extends _$ClientService {
     _subscription = null;
     await _socket?.close(WebSocketStatus.goingAway);
     _socket = null;
-    await _inputController?.close();
-    _inputController = null;
     state = ClientServiceState.disconnected;
   }
 

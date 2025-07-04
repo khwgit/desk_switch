@@ -530,6 +530,10 @@ class _ConnectionButton extends HookConsumerWidget {
         (state) => state == ServerServiceState.running,
       ),
     );
+    const loadingIcon = SizedBox.square(
+      dimension: 12,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    );
 
     // Determine button state and action
     String buttonText;
@@ -539,10 +543,7 @@ class _ConnectionButton extends HookConsumerWidget {
     switch (clientState) {
       case ClientServiceState.connecting:
         buttonText = 'Connecting...';
-        buttonIcon = const SizedBox.square(
-          dimension: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        );
+        buttonIcon = loadingIcon;
         buttonAction = null;
         break;
       case ClientServiceState.connected:
@@ -571,10 +572,7 @@ class _ConnectionButton extends HookConsumerWidget {
         break;
       case ClientServiceState.disconnecting:
         buttonText = 'Disconnecting...';
-        buttonIcon = const SizedBox.square(
-          dimension: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        );
+        buttonIcon = loadingIcon;
         buttonAction = null;
         break;
       case ClientServiceState.disconnected:
@@ -588,8 +586,8 @@ class _ConnectionButton extends HookConsumerWidget {
 
                   // Stop the server
                   await server.stop();
-                  await client.connect(selectedServer);
                 }
+                await client.connect(selectedServer);
               }
             : null;
         break;

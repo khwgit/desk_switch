@@ -1,5 +1,5 @@
 syntax = "proto3";
-package input_capture_injection;
+package desk_switch;
 
 // Enum for input type
 enum InputType {

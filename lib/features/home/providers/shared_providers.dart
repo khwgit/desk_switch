@@ -10,6 +10,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'shared_providers.g.dart';
 
+final _inputCapture = InputCaptureInjection();
+
 // Provider for whether the server is running
 @riverpod
 bool serverRunning(Ref ref) {
@@ -29,7 +31,6 @@ ClientServiceState clientState(Ref ref) {
 
 @riverpod
 class Server extends _$Server {
-  final _inputCapture = InputCaptureInjection();
   StreamSubscription? _mouseCaptureSubscription;
   StreamSubscription? _keyboardCaptureSubscription;
 
@@ -85,6 +86,8 @@ class Server extends _$Server {
 
 @riverpod
 class Client extends _$Client {
+  StreamSubscription? _inputSubscription;
+
   @override
   ClientServiceState build() {
     return ClientServiceState.disconnected;
@@ -93,10 +96,17 @@ class Client extends _$Client {
   Future<void> connect(ServerInfo server) async {
     final clientService = ref.read(clientServiceProvider.notifier);
     await clientService.connect(server);
+    _inputSubscription?.cancel();
+    _inputSubscription = clientService.inputs().listen((input) {
+      logger.info('🔌 Received input: $input');
+      // _inputCapture.injectInput(input);
+    });
   }
 
   Future<void> disconnect() async {
     final clientService = ref.read(clientServiceProvider.notifier);
     await clientService.disconnect();
+    _inputSubscription?.cancel();
+    _inputSubscription = null;
   }
 }
