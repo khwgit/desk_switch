@@ -9,26 +9,23 @@ extension InputToProto on Input {
     switch (this) {
       case KeyboardInput input:
         return pb.Input()
-          ..inputType = pb.InputType.KEYBOARD
+          ..kind = pb.InputType.KEYBOARD
           ..keyboard = (pb.KeyboardInput()
             ..code = input.code
             ..type = input.type.toProto()
             ..modifiers.addAll(input.modifiers.map((m) => m.toProto()))
-            ..character = input.character ?? ''
-            ..timestamp = input.timestamp ?? 0);
+            ..character = input.character ?? '');
       case MouseInput input:
         return pb.Input()
-          ..inputType = pb.InputType.MOUSE
+          ..kind = pb.InputType.MOUSE
           ..mouse = (pb.MouseInput()
             ..x = input.x
             ..y = input.y
             ..type = input.type.toProto()
             ..button = (input.button?.toProto() ?? pb.MouseButton.LEFT)
-            ..clickCount = input.clickCount ?? 0
             ..deltaX = input.deltaX ?? 0
             ..deltaY = input.deltaY ?? 0
-            ..deltaZ = input.deltaZ ?? 0
-            ..timestamp = input.timestamp ?? 0);
+            ..deltaZ = input.deltaZ ?? 0);
     }
   }
 }
@@ -42,7 +39,6 @@ extension ProtoToInput on pb.Input {
         type: k.type.toModel(),
         modifiers: k.modifiers.map((m) => m.toModel()).toList(),
         character: k.character.isEmpty ? null : k.character,
-        timestamp: k.timestamp == 0 ? null : k.timestamp,
       );
     } else if (hasMouse()) {
       final m = mouse;
@@ -51,11 +47,9 @@ extension ProtoToInput on pb.Input {
         y: m.y,
         type: m.type.toModel(),
         button: m.hasButton() ? m.button.toModel() : null,
-        clickCount: m.clickCount == 0 ? null : m.clickCount,
         deltaX: m.deltaX == 0 ? null : m.deltaX,
         deltaY: m.deltaY == 0 ? null : m.deltaY,
         deltaZ: m.deltaZ == 0 ? null : m.deltaZ,
-        timestamp: m.timestamp == 0 ? null : m.timestamp,
       );
     } else {
       throw Exception('Unknown input type');

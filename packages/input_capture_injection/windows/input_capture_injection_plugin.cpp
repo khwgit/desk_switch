@@ -25,8 +25,7 @@ namespace input_capture_injection
 
   namespace
   {
-    std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> keyboard_sink;
-    std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> mouse_sink;
+    std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> input_sink;
 
     HHOOK keyboard_hook = nullptr;
     HHOOK mouse_hook = nullptr;
@@ -42,12 +41,13 @@ namespace input_capture_injection
 
     LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
     {
-      if (nCode == HC_ACTION && keyboard_sink)
+      if (nCode == HC_ACTION && input_sink)
       {
         KBDLLHOOKSTRUCT *p = (KBDLLHOOKSTRUCT *)lParam;
 
         // Always capture the event first, regardless of blocking state
         flutter::EncodableMap event;
+        event[flutter::EncodableValue("kind")] = flutter::EncodableValue("keyboard");
         event[flutter::EncodableValue("code")] = flutter::EncodableValue((int)p->vkCode);
         event[flutter::EncodableValue("type")] = flutter::EncodableValue(
             wParam == WM_KEYDOWN ? "keyDown" : wParam == WM_KEYUP    ? "keyUp"
@@ -69,7 +69,7 @@ namespace input_capture_injection
         event[flutter::EncodableValue("timestamp")] = flutter::EncodableValue((int)p->time);
 
         // Send the event to Dart side
-        keyboard_sink->Success(flutter::EncodableValue(event));
+        input_sink->Success(flutter::EncodableValue(event));
 
         // Check if keyboard input is blocked - if so, prevent it from reaching other applications
         {
@@ -85,12 +85,13 @@ namespace input_capture_injection
 
     LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam)
     {
-      if (nCode == HC_ACTION && mouse_sink)
+      if (nCode == HC_ACTION && input_sink)
       {
         MSLLHOOKSTRUCT *p = (MSLLHOOKSTRUCT *)lParam;
 
         // Always capture the event first, regardless of blocking state
         flutter::EncodableMap event;
+        event[flutter::EncodableValue("kind")] = flutter::EncodableValue("mouse");
         event[flutter::EncodableValue("x")] = flutter::EncodableValue((double)p->pt.x);
         event[flutter::EncodableValue("y")] = flutter::EncodableValue((double)p->pt.y);
         event[flutter::EncodableValue("timestamp")] = flutter::EncodableValue((int)p->time);
@@ -155,7 +156,7 @@ namespace input_capture_injection
         event[flutter::EncodableValue("deltaZ")] = flutter::EncodableValue(deltaZ);
 
         // Send the event to Dart side
-        mouse_sink->Success(flutter::EncodableValue(event));
+        input_sink->Success(flutter::EncodableValue(event));
 
         // Check if mouse input is blocked - if so, prevent it from reaching other applications
         {
@@ -221,49 +222,27 @@ namespace input_capture_injection
 
     auto plugin = std::make_unique<InputCaptureInjectionPlugin>();
 
-    // Keyboard event channel
-    auto keyboard_channel = std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
-        registrar->messenger(), "input_capture_injection/keyboardInputs",
+    // Single input event channel
+    auto input_channel = std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
+        registrar->messenger(), "input_capture_injection/inputs",
         &flutter::StandardMethodCodec::GetInstance());
-    auto keyboard_handler = std::make_unique<flutter::StreamHandlerFunctions<flutter::EncodableValue>>(
+    auto input_handler = std::make_unique<flutter::StreamHandlerFunctions<flutter::EncodableValue>>(
         [](const flutter::EncodableValue *arguments,
            std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> &&events)
             -> std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>>
         {
-          keyboard_sink = std::move(events);
+          input_sink = std::move(events);
           StartHooks();
           return nullptr;
         },
         [](const flutter::EncodableValue *arguments)
             -> std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>>
         {
-          keyboard_sink.reset();
+          input_sink.reset();
           StopHooks();
           return nullptr;
         });
-    keyboard_channel->SetStreamHandler(std::move(keyboard_handler));
-
-    // Mouse event channel
-    auto mouse_channel = std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
-        registrar->messenger(), "input_capture_injection/mouseInputs",
-        &flutter::StandardMethodCodec::GetInstance());
-    auto mouse_handler = std::make_unique<flutter::StreamHandlerFunctions<flutter::EncodableValue>>(
-        [](const flutter::EncodableValue *arguments,
-           std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> &&events)
-            -> std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>>
-        {
-          mouse_sink = std::move(events);
-          StartHooks();
-          return nullptr;
-        },
-        [](const flutter::EncodableValue *arguments)
-            -> std::unique_ptr<flutter::StreamHandlerError<flutter::EncodableValue>>
-        {
-          mouse_sink.reset();
-          StopHooks();
-          return nullptr;
-        });
-    mouse_channel->SetStreamHandler(std::move(mouse_handler));
+    input_channel->SetStreamHandler(std::move(input_handler));
 
     channel->SetMethodCallHandler(
         [plugin_pointer = plugin.get()](const auto &call, auto result)

@@ -37,18 +37,8 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
     throw UnimplementedError('isPermissionGranted() has not been implemented.');
   }
 
-  /// Stream of captured keyboard events.
-  Stream<KeyboardInput> keyboardInputs() {
-    throw UnimplementedError('keyboardInputs() has not been implemented.');
-  }
-
-  /// Stream of captured mouse events.
-  Stream<MouseInput> mouseInputs() {
-    throw UnimplementedError('mouseInputs() has not been implemented.');
-  }
-
-  /// Stream of all input events (keyboard and mouse).
-  Stream<Input> inputs() {
+  /// Stream of all input events from the unified channel.
+  Stream<Map<String, dynamic>> inputs() {
     throw UnimplementedError('inputs() has not been implemented.');
   }
 
@@ -60,11 +50,6 @@ abstract class InputCaptureInjectionPlatform extends PlatformInterface {
   /// Injects a keyboard event.
   Future<void> injectKeyboardInput(KeyboardInput input) {
     throw UnimplementedError('injectKeyboardInput() has not been implemented.');
-  }
-
-  /// Injects an input event.
-  Future<void> injectInput(Input input) {
-    throw UnimplementedError('injectInput() has not been implemented.');
   }
 
   /// Sets whether input should be blocked.

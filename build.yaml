@@ -17,7 +17,7 @@ targets:
       freezed:
         enabled: true
         options:
-          union_key: type
+          union_key: kind
           union_value_case: none
           when: false
           map: false

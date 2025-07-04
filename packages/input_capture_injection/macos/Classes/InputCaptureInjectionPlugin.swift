@@ -12,10 +12,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
   private var eventTap: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
   private var blockedInputTypes: Set<InputType> = []
-  private var keyboardInputSink: FlutterEventSink?
-  private var mouseInputSink: FlutterEventSink?
-  private var isKeyboardStreamActive = false
-  private var isMouseStreamActive = false
+  private var inputSink: FlutterEventSink?
   private var originalCursor: NSCursor?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -23,33 +20,15 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     let instance = InputCaptureInjectionPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
 
-    let keyboardEventChannel = FlutterEventChannel(name: "input_capture_injection/keyboardInputs", binaryMessenger: registrar.messenger)
-    keyboardEventChannel.setStreamHandler(InputStreamHandler(
+    let inputEventChannel = FlutterEventChannel(name: "input_capture_injection/inputs", binaryMessenger: registrar.messenger)
+    inputEventChannel.setStreamHandler(InputStreamHandler(
       onListen: { [weak instance] arguments, events in
-        instance?.keyboardInputSink = events
-        instance?.isKeyboardStreamActive = true
+        instance?.inputSink = events
         instance?.startEventTap()
         return nil
       },
       onCancel: { [weak instance] arguments in
-        instance?.keyboardInputSink = nil
-        instance?.isKeyboardStreamActive = false
-        instance?.stopEventTap()
-        return nil
-      }
-    ))
-
-    let mouseEventChannel = FlutterEventChannel(name: "input_capture_injection/mouseInputs", binaryMessenger: registrar.messenger)
-    mouseEventChannel.setStreamHandler(InputStreamHandler(
-      onListen: { [weak instance] arguments, events in
-        instance?.mouseInputSink = events
-        instance?.isMouseStreamActive = true
-        instance?.startEventTap()
-        return nil
-      },
-      onCancel: { [weak instance] arguments in
-        instance?.mouseInputSink = nil
-        instance?.isMouseStreamActive = false
+        instance?.inputSink = nil
         instance?.stopEventTap()
         return nil
       }
@@ -155,10 +134,6 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
   }
 
   private func stopEventTap() {
-    if isKeyboardStreamActive || isMouseStreamActive {
-      return
-    }
-
     if let tap = eventTap {
       CGEvent.tapEnable(tap: tap, enable: false)
       eventTap = nil
@@ -212,6 +187,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     if flags.contains(.maskHelp) { modifiers.append("help") }
     
     let eventData: [String: Any] = [
+      "kind": "keyboard",
       "code": keyCode,
       "type": eventType,
       "modifiers": modifiers,
@@ -219,7 +195,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
       "timestamp": timestamp
     ]
     
-    keyboardInputSink?(eventData)
+    inputSink?(eventData)
   }
 
   private func handleMouseEvent(type: CGEventType, event: CGEvent) {
@@ -273,6 +249,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
     }
     
     let eventData: [String: Any] = [
+      "kind": "mouse",
       "x": location.x,
       "y": location.y,
       "type": eventType,
@@ -284,7 +261,7 @@ public class InputCaptureInjectionPlugin: NSObject, FlutterPlugin {
       "timestamp": timestamp
     ]
     
-    mouseInputSink?(eventData)
+    inputSink?(eventData)
   }
 
   private func injectMouseInput(call: FlutterMethodCall, result: @escaping FlutterResult) {

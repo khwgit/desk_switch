@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -10,11 +12,8 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('input_capture_injection');
 
-  static const EventChannel _keyboardEventChannel = EventChannel(
-    'input_capture_injection/keyboardInputs',
-  );
-  static const EventChannel _mouseEventChannel = EventChannel(
-    'input_capture_injection/mouseInputs',
+  static const EventChannel _inputsEventChannel = EventChannel(
+    'input_capture_injection/inputs',
   );
 
   @override
@@ -35,31 +34,10 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   }
 
   @override
-  Stream<KeyboardInput> keyboardInputs() {
-    return _keyboardEventChannel.receiveBroadcastStream().map((event) {
-      if (event is Map) {
-        final map = Map<String, dynamic>.from(event);
-        return KeyboardInput.fromJson(map);
-      }
-      throw ArgumentError('Invalid keyboard event format');
-    });
-  }
-
-  @override
-  Stream<MouseInput> mouseInputs() {
-    return _mouseEventChannel.receiveBroadcastStream().map((event) {
-      if (event is Map) {
-        final map = Map<String, dynamic>.from(event);
-        return MouseInput.fromJson(map);
-      }
-      throw ArgumentError('Invalid mouse event format');
-    });
-  }
-
-  @override
-  Stream<Input> inputs() async* {
-    yield* keyboardInputs();
-    yield* mouseInputs();
+  Stream<Map<String, dynamic>> inputs() {
+    return _inputsEventChannel.receiveBroadcastStream().map(
+      (event) => Map<String, dynamic>.from(event),
+    );
   }
 
   @override
@@ -70,14 +48,6 @@ class MethodChannelInputCaptureInjection extends InputCaptureInjectionPlatform {
   @override
   Future<void> injectKeyboardInput(KeyboardInput input) async {
     await methodChannel.invokeMethod('injectKeyboardInput', input.toJson());
-  }
-
-  @override
-  Future<void> injectInput(Input input) async {
-    await switch (input) {
-      MouseInput() => injectMouseInput(input),
-      KeyboardInput() => injectKeyboardInput(input),
-    };
   }
 
   @override

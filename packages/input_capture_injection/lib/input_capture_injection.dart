@@ -4,6 +4,10 @@ import 'models/input.dart';
 export 'models/input.dart';
 
 class InputCaptureInjection {
+  const InputCaptureInjection._();
+  static const InputCaptureInjection instance = InputCaptureInjection._();
+  factory InputCaptureInjection() => instance;
+
   Future<bool> requestPermission([Set<InputType>? types]) {
     return InputCaptureInjectionPlatform.instance.requestPermission(types);
   }
@@ -12,16 +16,10 @@ class InputCaptureInjection {
     return InputCaptureInjectionPlatform.instance.isPermissionGranted(types);
   }
 
-  Stream<KeyboardInput> keyboardInputs() {
-    return InputCaptureInjectionPlatform.instance.keyboardInputs();
-  }
-
-  Stream<MouseInput> mouseInputs() {
-    return InputCaptureInjectionPlatform.instance.mouseInputs();
-  }
-
   Stream<Input> inputs() {
-    return InputCaptureInjectionPlatform.instance.inputs();
+    return InputCaptureInjectionPlatform.instance.inputs().map(
+      (event) => Input.fromJson(event),
+    );
   }
 
   Future<void> injectMouseInput(MouseInput input) {
@@ -33,7 +31,10 @@ class InputCaptureInjection {
   }
 
   Future<void> injectInput(Input input) {
-    return InputCaptureInjectionPlatform.instance.injectInput(input);
+    return switch (input) {
+      MouseInput() => injectMouseInput(input),
+      KeyboardInput() => injectKeyboardInput(input),
+    };
   }
 
   Future<bool> setInputBlocked(bool blocked, [Set<InputType>? types]) {

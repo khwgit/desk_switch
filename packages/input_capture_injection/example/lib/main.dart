@@ -21,14 +21,11 @@ class _MyAppState extends State<MyApp> {
   final _inputCaptureInjectionPlugin = InputCaptureInjection();
 
   bool _permissionGranted = false;
-  bool _isKeyboardCapturing = false;
-  bool _isMouseCapturing = false;
+  bool _isCapturing = false;
 
   final List<String> _inputEvents = [];
   final ScrollController _inputEventsScrollController = ScrollController();
-
-  StreamSubscription<KeyboardInput>? _keyboardSubscription;
-  StreamSubscription<MouseInput>? _mouseSubscription;
+  StreamSubscription<Input>? _inputSubscription;
 
   @override
   void initState() {
@@ -38,8 +35,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _keyboardSubscription?.cancel();
-    _mouseSubscription?.cancel();
+    _inputSubscription?.cancel();
     _inputEventsScrollController.dispose();
     super.dispose();
   }
@@ -99,74 +95,47 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Future<void> startKeyboardCapture() async {
+  Future<void> startCapture() async {
     if (!_permissionGranted) {
       _addInputEvent('Permission not granted');
       return;
     }
     try {
-      _keyboardSubscription = _inputCaptureInjectionPlugin.keyboardInputs().listen((
+      _inputSubscription = _inputCaptureInjectionPlugin.inputs().listen((
         event,
       ) {
-        _addInputEvent(
-          'Keyboard: ${event.type} - Key: ${event.code} - Modifiers: ${event.modifiers}',
-        );
+        if (event is KeyboardInput) {
+          _addInputEvent(
+            'Keyboard: ${event.type} - Key: ${event.code} - Modifiers: ${event.modifiers}',
+          );
+        } else if (event is MouseInput) {
+          _addInputEvent(
+            'Mouse: ${event.type} - Pos: (${event.x.toStringAsFixed(1)}, ${event.y.toStringAsFixed(1)}) - Button: ${event.button}',
+          );
+        } else {
+          _addInputEvent('Unknown input event: $event');
+        }
       });
       if (mounted) {
         setState(() {
-          _isKeyboardCapturing = true;
+          _isCapturing = true;
         });
       }
-      _addInputEvent('Started capturing keyboard events');
+      _addInputEvent('Started capturing input events');
     } catch (e) {
-      _addInputEvent('Error starting keyboard capture: $e');
+      _addInputEvent('Error starting input capture: $e');
     }
   }
 
-  Future<void> stopKeyboardCapture() async {
-    await _keyboardSubscription?.cancel();
-    _keyboardSubscription = null;
+  Future<void> stopCapture() async {
+    await _inputSubscription?.cancel();
+    _inputSubscription = null;
     if (mounted) {
       setState(() {
-        _isKeyboardCapturing = false;
+        _isCapturing = false;
       });
     }
-    _addInputEvent('Stopped capturing keyboard events');
-  }
-
-  Future<void> startMouseCapture() async {
-    if (!_permissionGranted) {
-      _addInputEvent('Permission not granted');
-      return;
-    }
-    try {
-      _mouseSubscription = _inputCaptureInjectionPlugin.mouseInputs().listen((
-        event,
-      ) {
-        _addInputEvent(
-          'Mouse: ${event.type} - Pos: (${event.x.toStringAsFixed(1)}, ${event.y.toStringAsFixed(1)}) - Button: ${event.button}',
-        );
-      });
-      if (mounted) {
-        setState(() {
-          _isMouseCapturing = true;
-        });
-      }
-      _addInputEvent('Started capturing mouse events');
-    } catch (e) {
-      _addInputEvent('Error starting mouse capture: $e');
-    }
-  }
-
-  Future<void> stopMouseCapture() async {
-    await _mouseSubscription?.cancel();
-    _mouseSubscription = null;
-    if (mounted) {
-      setState(() {
-        _isMouseCapturing = false;
-      });
-    }
-    _addInputEvent('Stopped capturing mouse events');
+    _addInputEvent('Stopped capturing input events');
   }
 
   Future<void> injectTestKeyEvent() async {
@@ -176,13 +145,13 @@ class _MyAppState extends State<MyApp> {
     }
 
     try {
-      await _inputCaptureInjectionPlugin.injectKeyboardInput(
+      await _inputCaptureInjectionPlugin.injectInput(
         KeyboardInput(
           code: 0x00, // Key code for 'A'
           type: KeyboardInputType.keyDown,
           modifiers: [KeyModifier.shift],
           character: 'A',
-          timestamp: DateTime.now().millisecondsSinceEpoch,
+          // timestamp: DateTime.now().millisecondsSinceEpoch,
         ),
       );
       _addInputEvent('Injected keyboard event: Shift+A');
@@ -198,7 +167,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     try {
-      await _inputCaptureInjectionPlugin.injectMouseInput(
+      await _inputCaptureInjectionPlugin.injectInput(
         MouseInput(
           x: 100.0,
           y: 100.0,
@@ -208,7 +177,7 @@ class _MyAppState extends State<MyApp> {
           deltaX: 0.0,
           deltaY: 0.0,
           deltaZ: 0.0,
-          timestamp: DateTime.now().millisecondsSinceEpoch,
+          // timestamp: DateTime.now().millisecondsSinceEpoch,
         ),
       );
       _addInputEvent('Injected mouse event: Left click at (100, 100)');
@@ -405,69 +374,29 @@ class _MyAppState extends State<MyApp> {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _isKeyboardCapturing
-                          ? null
-                          : startKeyboardCapture,
+                      onPressed: _isCapturing ? null : startCapture,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _isKeyboardCapturing
+                        backgroundColor: _isCapturing
                             ? Colors.grey
                             : Colors.blue,
                         foregroundColor: Colors.white,
                       ),
                       child: Text(
-                        _isKeyboardCapturing
-                            ? 'Keyboard Capturing...'
-                            : 'Start Keyboard Capture',
+                        _isCapturing ? 'Capturing...' : 'Start Capture',
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _isKeyboardCapturing
-                          ? stopKeyboardCapture
-                          : null,
+                      onPressed: _isCapturing ? stopCapture : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _isKeyboardCapturing
+                        backgroundColor: _isCapturing
                             ? Colors.red
                             : Colors.grey,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text('Stop Keyboard Capture'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isMouseCapturing ? null : startMouseCapture,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isMouseCapturing
-                            ? Colors.grey
-                            : Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(
-                        _isMouseCapturing
-                            ? 'Mouse Capturing...'
-                            : 'Start Mouse Capture',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isMouseCapturing ? stopMouseCapture : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isMouseCapturing
-                            ? Colors.red
-                            : Colors.grey,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Stop Mouse Capture'),
+                      child: const Text('Stop Capture'),
                     ),
                   ),
                 ],

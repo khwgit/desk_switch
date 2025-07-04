@@ -49,7 +49,6 @@ message KeyboardInput {
   KeyboardInputType type = 2;
   repeated KeyModifier modifiers = 3;
   string character = 4;
-  int32 timestamp = 5;
 }
 
 message MouseInput {
@@ -57,15 +56,13 @@ message MouseInput {
   double y = 2;
   MouseInputType type = 3;
   MouseButton button = 4;
-  int32 clickCount = 5;
-  double deltaX = 6;
-  double deltaY = 7;
-  double deltaZ = 8;
-  int32 timestamp = 9;
+  double deltaX = 5;
+  double deltaY = 6;
+  double deltaZ = 7;
 }
 
 message Input {
-  InputType input_type = 1;
+  InputType kind = 1;
   oneof input {
     KeyboardInput keyboard = 2;
     MouseInput mouse = 3;

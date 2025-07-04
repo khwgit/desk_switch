@@ -31,8 +31,7 @@ ClientServiceState clientState(Ref ref) {
 
 @riverpod
 class Server extends _$Server {
-  StreamSubscription? _mouseCaptureSubscription;
-  StreamSubscription? _keyboardCaptureSubscription;
+  StreamSubscription? _inputCaptureSubscription;
 
   @override
   ServerInfo? build() {
@@ -54,16 +53,10 @@ class Server extends _$Server {
 
       // Subscribe to input capture and log events
       await _inputCapture.requestPermission();
-      _mouseCaptureSubscription?.cancel();
-      _mouseCaptureSubscription = _inputCapture.mouseInputs().listen((input) {
+      _inputCaptureSubscription?.cancel();
+      _inputCaptureSubscription = _inputCapture.inputs().listen((input) {
         logger.info('🖱️ Captured input: $input');
-        serverService.sendInput(input.copyWith(timestamp: null));
-      });
-      _keyboardCaptureSubscription?.cancel();
-      _keyboardCaptureSubscription = _inputCapture.keyboardInputs().listen((
-        input,
-      ) {
-        logger.info('🎹 Captured input: $input');
+        serverService.sendInput(input);
       });
     }
   }
@@ -77,10 +70,8 @@ class Server extends _$Server {
     // await inputCaptureService.stop();
     await serverService.stop();
     // Cancel input capture subscription
-    await _mouseCaptureSubscription?.cancel();
-    _mouseCaptureSubscription = null;
-    await _keyboardCaptureSubscription?.cancel();
-    _keyboardCaptureSubscription = null;
+    await _inputCaptureSubscription?.cancel();
+    _inputCaptureSubscription = null;
   }
 }
 

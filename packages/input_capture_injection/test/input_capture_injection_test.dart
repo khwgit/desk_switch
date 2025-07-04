@@ -34,19 +34,7 @@ class MockInputCaptureInjectionPlatform
   }
 
   @override
-  Stream<KeyboardInput> keyboardInputs() {
-    // TODO: implement keyInputs
-    throw UnimplementedError();
-  }
-
-  @override
-  Stream<MouseInput> mouseInputs() {
-    // TODO: implement mouseInputs
-    throw UnimplementedError();
-  }
-
-  @override
-  Stream<Input> inputs() {
+  Stream<Map<String, dynamic>> inputs() {
     // TODO: implement inputs
     throw UnimplementedError();
   }
